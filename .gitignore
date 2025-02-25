@@ -1,0 +1,13 @@
+# Gradle
+.gradle/
+build/
+out/
+
+# IDE settings
+.idea/
+.vscode/
+
+# Logs & OS files
+*.log
+.DS_Store
+
