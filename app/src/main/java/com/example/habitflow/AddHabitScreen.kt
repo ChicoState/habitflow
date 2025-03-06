@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.habitflow.saveHabits
 import com.example.habitflow.loadHabits
+import androidx.compose.foundation.clickable
+
 
 @Composable
 fun AddHabitScreen(navController: NavController) {
@@ -50,11 +52,12 @@ fun AddHabitScreen(navController: NavController) {
         Button(
             onClick = {
                 val habits = loadHabits(sharedPreferences).toMutableList()
-                val habitEntry = if (isGoodHabit) "👍 $habitName: $habitDescription" else "👎 $habitName: $habitDescription"
+                val good = if (isGoodHabit) { "good" } else { "bad" }
+                val habitEntry = "$habitName:$habitDescription:$good"
                 habits.add(habitEntry)
                 saveHabits(sharedPreferences, habits)
 
-                navController.navigate("home") // Navigate back to Home
+                navController.navigate("home?goodHabit=${good}") // Navigate back to Home
             },
             modifier = Modifier.padding(top = 16.dp)
         ) {
