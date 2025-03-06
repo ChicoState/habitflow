@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
+// This is important for the pop-up dialogue
 
 package com.example.habitflow.ui
 
@@ -15,6 +16,7 @@ import androidx.navigation.NavController
 import com.example.habitflow.saveHabits
 import com.example.habitflow.loadHabits
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.clickable
 
 
 @Composable
@@ -63,16 +65,12 @@ fun AddHabitScreen(navController: NavController) {
                     // Not strictly enforced, user can proceed.
                 } else {
                     val habits = loadHabits(sharedPreferences).toMutableList()
-
-                    val habitEntry = if (isGoodHabit) {
-                        "👍 $habitName: $habitDescription"
-                    } else {
-                        "👎 $habitName: $habitDescription"
-                    }
-
+                    val good = if (isGoodHabit) { "good" } else { "bad" }
+                    val habitEntry = "$habitName:$habitDescription:$good"
                     habits.add(habitEntry)
                     saveHabits(sharedPreferences, habits)
-                    navController.navigate("home") // Navigate back to Home
+
+                    navController.navigate("home?goodHabit=${good}") // Navigate back to Home
                 }
             },
             modifier = Modifier.padding(top = 16.dp)
