@@ -1,5 +1,5 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
-// This is important for the pop-up dialogue
+// This is important for the pop-up BasicAlertDialog for some reason
 
 package com.example.habitflow.ui
 
@@ -76,6 +76,73 @@ fun AddHabitScreen(navController: NavController) {
             modifier = Modifier.padding(top = 16.dp)
         ) {
             Text("Save Habit")
+        }
+
+        if (showNameErrorDialog) {
+            BasicAlertDialog(
+                onDismissRequest = { showNameErrorDialog = false },
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    tonalElevation = 6.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text("Habit Name Required", style = MaterialTheme.typography.headlineSmall)
+                        Text("Please enter a name for your habit before saving.")
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = { showNameErrorDialog = false }
+                        ) {
+                            Text("OK")
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showDescErrorDialog) {
+            BasicAlertDialog(
+                onDismissRequest = { showDescErrorDialog = false },
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    tonalElevation = 6.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text("No Description Entered", style = MaterialTheme.typography.headlineSmall)
+                        Text("Are you sure you want to save without a description?")
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            TextButton(
+                                onClick = { showDescErrorDialog = false }
+                            ) {
+                                Text("Cancel")
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val habits = loadHabits(sharedPreferences).toMutableList()
+                                    val good = if (isGoodHabit) { "good" } else { "bad" }
+                                    val habitEntry = "$habitName:$habitDescription:$good"
+                                    habits.add(habitEntry)
+                                    saveHabits(sharedPreferences, habits)
+
+                                    navController.navigate("home?goodHabit=${good}")
+                                }
+                            ) {
+                                Text("Save Anyway")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
