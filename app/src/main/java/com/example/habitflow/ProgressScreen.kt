@@ -15,6 +15,8 @@ import com.github.mikephil.charting.data.LineDataSet
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
+
 
 
 @Composable
@@ -124,34 +126,66 @@ fun ProgressScreen(navController: NavController, habit: String) {
 @Composable
 fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
     val parts = habit.split(":")
-    val lineDataSets = dataSets.mapIndexed { index, data ->
+    val lineDataSets = mutableListOf<LineDataSet>()
+    dataSets.mapIndexed { index, data ->
         val label = when (index) {
             0 -> "Tracked"  // First dataset label
             1 -> "Goal"     // Second dataset label
             else -> "Comparison" // Any additional datasets
         }
-        LineDataSet(data, label).apply {
-            // Customize each dataset (e.g., colors, values, etc.)
-            when (index) {
-                0 -> {
-                    color = Color.parseColor("#006400")
-                }
-                1 -> {
-                    color = Color.argb(50, 0, 255, 0)
-                    lineWidth = 5f
-                }
-                else -> {
-                    color = Color.BLUE
-                }
+
+        val entriesWithRedDot = mutableListOf<Entry>()
+        val newData = mutableListOf<Entry>()
+
+        for (i in 1 until data.size - 1) {
+            val currentEntry = data[i]
+            val previousEntry = data[i - 1]
+            val nextEntry = data[i + 1]
+
+            if (currentEntry.y == 0f) {
+                // Insert a red dot between previous and next entry
+                val averageY = (previousEntry.y + nextEntry.y) / 2
+                entriesWithRedDot.add(Entry(currentEntry.x, averageY))
+                newData.add(Entry(currentEntry.x, averageY))
+            } else {
+                // Add regular point
+                newData.add(currentEntry)
             }
-            valueTextColor = Color.BLACK
-            setDrawValues(false)
-            setDrawCircles(false) // Remove dots on the line
-            setDrawFilled(false)
         }
+        lineDataSets.add(
+            LineDataSet(newData, label).apply {
+                // Customize each dataset (e.g., colors, values, etc.)
+                when (index) {
+                    0 -> {
+                        color = Color.parseColor("#006400")
+                    }
+                    1 -> {
+                        color = Color.argb(50, 0, 255, 0)
+                        lineWidth = 5f
+                    }
+                    else -> {
+                        color = Color.BLUE
+                    }
+                }
+                valueTextColor = Color.BLACK
+                setDrawValues(false)
+                setDrawCircles(false) // Remove dots on the line
+                setDrawFilled(false)
+            }
+        )
+        lineDataSets.add(
+            LineDataSet(entriesWithRedDot, "$label Red Dots").apply {
+                setDrawCircles(true) // Show points as circles
+                setCircleColor(Color.RED) // Red color for the circles
+                setCircleRadius(3f) // Set circle radius
+                color = Color.argb(0, 0, 0, 0)
+                setDrawValues(false) // Don't draw values on the red dots
+            }
+        )
+
     }
 
-    val lineData = LineData(lineDataSets)
+    val lineData = LineData(lineDataSets as MutableList<ILineDataSet>)
 
     AndroidView(
         factory = {
