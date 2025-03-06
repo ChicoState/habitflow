@@ -20,8 +20,13 @@ import androidx.compose.foundation.lazy.items
 @Composable
 fun ProgressScreen(navController: NavController, habit: String) {
     // Dummy data for cigarettes smoked each day (replace with actual data logic)
-    val weeklyCigarettes = listOf(Entry(1f, 15f), Entry(2f, 17f), Entry(3f, 14f), Entry(4f, 10f), Entry(5f, 7f), Entry(6f, 11f), Entry(7f, 5f), Entry(8f, 6f), Entry(9f, 4f), Entry(10f, 2f))
-    val comparisonData = listOf(Entry(1f, 15f), Entry(2f, 13f), Entry(3f, 11f), Entry(4f, 9f), Entry(5f, 7f), Entry(6f, 5f), Entry(7f, 3f), Entry(8f, 2f), Entry(9f, 1f), Entry(10f, 0f))
+    val parts = habit.split(":")
+    val userData = if (parts[2] == "good" )
+    { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
+    else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
+    val comparisonData = if (parts[2] == "good" )
+    { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
+    else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
 
     LazyColumn(
         modifier = Modifier
@@ -54,7 +59,7 @@ fun ProgressScreen(navController: NavController, habit: String) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "$habit",
+                    text = "${parts[0]}",
                     style = MaterialTheme.typography.headlineMedium
                 )
             }
@@ -71,7 +76,7 @@ fun ProgressScreen(navController: NavController, habit: String) {
                         text = "Weekly",
                         style = MaterialTheme.typography.headlineSmall
                     )
-                    LineChartView(dataSets = listOf(weeklyCigarettes, comparisonData))
+                    LineChartView(dataSets = listOf(userData[0], comparisonData[0]), habit)
                 }
             }
         }
@@ -90,7 +95,7 @@ fun ProgressScreen(navController: NavController, habit: String) {
                         text = "Monthly",
                         style = MaterialTheme.typography.headlineSmall
                     )
-                    LineChartView(dataSets = listOf(weeklyCigarettes, comparisonData))
+                    LineChartView(dataSets = listOf(userData[1], comparisonData[1]), habit)
                 }
             }
         }
@@ -109,7 +114,7 @@ fun ProgressScreen(navController: NavController, habit: String) {
                         text = "Overall",
                         style = MaterialTheme.typography.headlineSmall
                     )
-                    LineChartView(dataSets = listOf(weeklyCigarettes, comparisonData))
+                    LineChartView(dataSets = listOf(userData[2], comparisonData[2]), habit)
                 }
             }
         }
@@ -117,7 +122,8 @@ fun ProgressScreen(navController: NavController, habit: String) {
 }
 
 @Composable
-fun LineChartView(dataSets: List<List<Entry>>) {
+fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
+    val parts = habit.split(":")
     val lineDataSets = dataSets.mapIndexed { index, data ->
         val label = when (index) {
             0 -> "Tracked"  // First dataset label
@@ -126,13 +132,22 @@ fun LineChartView(dataSets: List<List<Entry>>) {
         }
         LineDataSet(data, label).apply {
             // Customize each dataset (e.g., colors, values, etc.)
-            color = when (index) {
-                0 -> Color.parseColor("#006400")
-                1 -> Color.GREEN
-                else -> Color.BLUE // You can adjust the colors as needed
+            when (index) {
+                0 -> {
+                    color = Color.parseColor("#006400")
+                }
+                1 -> {
+                    color = Color.argb(50, 0, 255, 0)
+                    lineWidth = 5f
+                }
+                else -> {
+                    color = Color.BLUE
+                }
             }
             valueTextColor = Color.BLACK
             setDrawValues(false)
+            setDrawCircles(false) // Remove dots on the line
+            setDrawFilled(false)
         }
     }
 
