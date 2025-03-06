@@ -2,6 +2,7 @@ package com.example.habitflow
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
 
 
 @Composable
@@ -141,58 +145,74 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
             .clickable {
                 navController.navigate("progress/${parts[0]}")
             },
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
-
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        shape = RoundedCornerShape(20.dp),
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .background(
+                    color = backgroundColor.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.weight(0.5f)) {
-                Text(text = parts[0], style = MaterialTheme.typography.titleMedium) // Habit Name
-                if (parts.size > 1) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(0.5f)) {
                     Text(
-                        text = parts[1],
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) // Habit Description
+                        text = parts[0],
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    ) // Habit Name
+                    if (parts.size > 1) {
+                        Text(
+                            text = parts[1],
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) // Habit Description
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.width(16.dp))  // Adjust the width as needed
+                Spacer(modifier = Modifier.width(16.dp))  // Adjust the width as needed
 
-            Column(modifier = Modifier.weight(0.5f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween, // To space out the two columns
-                    verticalAlignment = Alignment.CenterVertically // To center the items vertically within the row
-                ) {
+                Column(modifier = Modifier.weight(0.5f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween, // To space out the two columns
+                        verticalAlignment = Alignment.CenterVertically // To center the items vertically within the row
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.Start // Centers horizontally
+                        ) {
+                            Text(
+                                text = "$streak Day",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(bottom = 1.dp, top = 11.dp)
+                            )
+                            Text(
+                                text = "Streak \uD83D\uDD25",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.Start // Centers horizontally
+                        modifier = Modifier.weight(1f), // Take up equal space
+                        verticalArrangement = Arrangement.Center, // Center content vertically
+                        horizontalAlignment = Alignment.End // Align items to the right
                     ) {
                         Text(
-                            text = "$streak Day",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(bottom = 1.dp, top = 11.dp)
-                        )
-                        Text(
-                            text = "Streak \uD83D\uDD25",
-                            style = MaterialTheme.typography.bodyLarge
+                            text = "Next Goal: 15 Days",
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
-                Column(
-                    modifier = Modifier.weight(1f), // Take up equal space
-                    verticalArrangement = Arrangement.Center, // Center content vertically
-                    horizontalAlignment = Alignment.End // Align items to the right
-                ) {
-                    Text(text = "Next Goal: 15 Days", style = MaterialTheme.typography.bodySmall)
-                }
+
             }
         }
     }
