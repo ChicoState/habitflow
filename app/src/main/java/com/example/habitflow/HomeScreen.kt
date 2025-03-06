@@ -17,7 +17,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
 import com.github.mikephil.charting.data.Entry
 import androidx.compose.ui.Alignment
-
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.shape.CircleShape
 
 
 @Composable
@@ -26,9 +28,19 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
     val sharedPreferences = remember { context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE) }
     var habits by remember { mutableStateOf(loadHabits(sharedPreferences)) }
 
-    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Text(text = "HabitFlow", style = MaterialTheme.typography.headlineMedium)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "HabitFlow", style = MaterialTheme.typography.headlineMedium)
+            }
 
             // Keeps button at the bottom while scrolling through list
             LazyColumn(modifier = Modifier.weight(1f)) {
@@ -37,14 +49,25 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
                 }
             }
         }
-
-        Button(
-            onClick = { navController.navigate("addHabit") },
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp)
+                .padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Add Habit")
+            FloatingActionButton(
+                onClick = {navController.navigate("addHabit")},
+                containerColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(80.dp)
+                    .padding(8.dp),
+                shape = CircleShape,
+                elevation = FloatingActionButtonDefaults.elevation(10.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Habit",modifier = Modifier.size(40.dp), tint = Color.White)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -92,16 +115,24 @@ fun countMatchingFromEnd(list1: List<Entry>, list2: List<Entry>): Int {
 @Composable
 fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
     val parts = habit.split(":")
-    val backgroundColor = if (parts[2] == "good") { Color(0x40A5D6A7) } else { Color(0x40FF8A80) }
-    val weeklyData = listOf(Entry(1f, 15f), Entry(2f, 17f), Entry(3f, 14f), Entry(4f, 10f),
-        Entry(5f, 7f), Entry(6f, 11f), Entry(7f, 5f), Entry(8f, 6f), Entry(9f, 1f), Entry(10f, 0f))
-    val comparisonData = listOf(Entry(1f, 15f), Entry(2f, 13f), Entry(3f, 11f), Entry(4f, 9f),
-        Entry(5f, 7f), Entry(6f, 5f), Entry(7f, 3f), Entry(8f, 2f), Entry(9f, 1f), Entry(10f, 0f))
+    val backgroundColor = if (parts[2] == "good") {
+        Color(0x40A5D6A7)
+    } else {
+        Color(0x40FF8A80)
+    }
+    val weeklyData = listOf(
+        Entry(1f, 15f), Entry(2f, 17f), Entry(3f, 14f), Entry(4f, 10f),
+        Entry(5f, 7f), Entry(6f, 11f), Entry(7f, 5f), Entry(8f, 6f), Entry(9f, 1f), Entry(10f, 0f)
+    )
+    val comparisonData = listOf(
+        Entry(1f, 15f), Entry(2f, 13f), Entry(3f, 11f), Entry(4f, 9f),
+        Entry(5f, 7f), Entry(6f, 5f), Entry(7f, 3f), Entry(8f, 2f), Entry(9f, 1f), Entry(10f, 0f)
+    )
     val streak = (countMatchingFromEnd(weeklyData, comparisonData)).toString()
     // currently working on this:
     //val progress =
-        //if (isFirstYGreaterThanLast(weeklyData) && parts[2] != "good") { "\uD83D\uDC4D" }
-        //else if (!isFirstYGreaterThanLast(weeklyData)) { "\uD83D\uDC4E" }
+    //if (isFirstYGreaterThanLast(weeklyData) && parts[2] != "good") { "\uD83D\uDC4D" }
+    //else if (!isFirstYGreaterThanLast(weeklyData)) { "\uD83D\uDC4E" }
 
     Card(
         modifier = Modifier
@@ -115,7 +146,9 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
 
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(0.5f)) {
