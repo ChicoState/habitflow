@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 
 
+
 @Composable
 fun HomeScreen(navController: NavController, goodHabit: String) {
     val context = LocalContext.current
@@ -115,35 +116,42 @@ fun countMatchingFromEnd(list1: List<Entry>, list2: List<Entry>): Int {
     return count
 }
 
+fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
+    val size1 = list1.size
+    val size2 = list2.size
+
+    // Calculate the smaller list size and the larger list size
+    val smallerSize = if (size1 < size2) size1 else size2
+    val largerSize = if (size1 > size2) size1 else size2
+
+    // Calculate the percentage and return as an integer
+    return ((smallerSize.toFloat() / largerSize) * 100).toInt()
+}
+
 
 @Composable
 fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
     val parts = habit.split(":")
-    val backgroundColor = if (parts[2] == "good") {
-        Color(0x40A5D6A7)
-    } else {
-        Color(0x40FF8A80)
-    }
-    val weeklyData = listOf(
-        Entry(1f, 15f), Entry(2f, 17f), Entry(3f, 14f), Entry(4f, 10f),
-        Entry(5f, 7f), Entry(6f, 11f), Entry(7f, 5f), Entry(8f, 6f), Entry(9f, 1f), Entry(10f, 0f)
-    )
-    val comparisonData = listOf(
-        Entry(1f, 15f), Entry(2f, 13f), Entry(3f, 11f), Entry(4f, 9f),
-        Entry(5f, 7f), Entry(6f, 5f), Entry(7f, 3f), Entry(8f, 2f), Entry(9f, 1f), Entry(10f, 0f)
-    )
-    val streak = (countMatchingFromEnd(weeklyData, comparisonData)).toString()
-    // currently working on this:
-    //val progress =
-    //if (isFirstYGreaterThanLast(weeklyData) && parts[2] != "good") { "\uD83D\uDC4D" }
-    //else if (!isFirstYGreaterThanLast(weeklyData)) { "\uD83D\uDC4E" }
+    val backgroundColor = if (parts[2] == "good") { Color(0x40A5D6A7) } else { Color(0x40FF8A80) }
+    val userData = if (parts[2] == "good" )
+    { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
+    else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
+    val comparisonData = if (parts[2] == "good" )
+    { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
+    else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
+    val progress = calculateSizePercentage(userData[2], comparisonData[2]).toString()
+    val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
+    val upOrDown =
+        if ((isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") || (!isFirstYGreaterThanLast(userData[2]) && parts[2] == "good"))
+        { "↗\uFE0F" } else { "↘\uFE0F" }
+    val goalLength = comparisonData[2].size
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clickable {
-                navController.navigate("progress/${parts[0]}")
+                navController.navigate("progress/${habit}")
             },
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(20.dp),
@@ -179,16 +187,18 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
 
                 Spacer(modifier = Modifier.width(16.dp))  // Adjust the width as needed
 
+                // Right Column: Streak and Progress
                 Column(modifier = Modifier.weight(0.5f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween, // To space out the two columns
-                        verticalAlignment = Alignment.CenterVertically // To center the items vertically within the row
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // First Column for Streak test
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.Start // Centers horizontally
+                            horizontalAlignment = Alignment.Start
                         ) {
                             Text(
                                 text = "$streak Day",
@@ -200,20 +210,35 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
+                        // Second Column for Progress Emoji (Thumbs Up / Thumbs Down)
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Text(
+                                text = "$progress%",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier
+                                    .padding(end = 16.dp)
+                                    .padding(top = 12.dp)
+                            )
+                            Text(
+                                text = "Complete",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(end = 16.dp)
+                            )
+                        }
                     }
-                    Column(
-                        modifier = Modifier.weight(1f), // Take up equal space
-                        verticalArrangement = Arrangement.Center, // Center content vertically
-                        horizontalAlignment = Alignment.End // Align items to the right
-                    ) {
-                        Text(
-                            text = "Next Goal: 15 Days",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
 
+                    Text(
+                        text = "Next Goal: 15 Days",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
     }
 }
+
+
