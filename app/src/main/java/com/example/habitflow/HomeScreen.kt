@@ -26,25 +26,29 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
     val sharedPreferences = remember { context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE) }
     var habits by remember { mutableStateOf(loadHabits(sharedPreferences)) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(text = "HabitFlow", style = MaterialTheme.typography.headlineMedium)
+    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Text(text = "HabitFlow", style = MaterialTheme.typography.headlineMedium)
 
-        LazyColumn {
-            items(habits) { habit ->
-                HabitItem(habit, navController, goodHabit)
+            // Keeps button at the bottom while scrolling through list
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(habits) { habit ->
+                    HabitItem(habit, navController, goodHabit)
+                }
             }
         }
 
         Button(
-            onClick = {
-                navController.navigate("addHabit")
-            },
-            modifier = Modifier.padding(top = 16.dp)
+            onClick = { navController.navigate("addHabit") },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
         ) {
             Text("Add Habit")
         }
     }
 }
+
 
 // Function to load habits from SharedPreferences
 fun loadHabits(sharedPreferences: SharedPreferences): List<String> {
