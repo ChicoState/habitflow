@@ -163,7 +163,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                     color = backgroundColor.copy(alpha = 0.4f),
                     shape = RoundedCornerShape(20.dp)
                 )
-                .padding(16.dp)
+                .padding(6.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -195,24 +195,22 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // First Column for Streak test
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.Start
-                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
                             Text(
                                 text = "$streak Day",
                                 style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.padding(bottom = 1.dp, top = 11.dp)
+                                modifier = Modifier//.padding(bottom = 1.dp, top = 4.dp)
                             )
                             Text(
                                 text = "Streak \uD83D\uDD25",
                                 style = MaterialTheme.typography.bodyLarge
                             )
+                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
                         }
                         // Second Column for Progress Emoji (Thumbs Up / Thumbs Down)
                         Column(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).padding(end = 10.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.End
                         ) {
@@ -220,21 +218,16 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                                 text = "$progress%",
                                 style = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier
-                                    .padding(end = 16.dp)
-                                    .padding(top = 12.dp)
+                                    .padding(end = 20.dp)
+                                    .padding(top = 4.dp)
                             )
                             Text(
                                 text = "Complete",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(end = 16.dp)
+                                style = MaterialTheme.typography.bodyMedium
+                                //modifier = Modifier.padding(end = 16.dp)
                             )
                         }
                     }
-
-                    Text(
-                        text = "Next Goal: 15 Days",
-                        style = MaterialTheme.typography.bodySmall
-                    )
                 }
             }
         }

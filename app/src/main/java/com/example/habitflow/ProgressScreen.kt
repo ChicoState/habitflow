@@ -142,11 +142,11 @@ fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
             val previousEntry = data[i - 1]
             val nextEntry = data[i + 1]
 
-            if (currentEntry.y == 0f) {
+            if ((currentEntry.x - previousEntry.x) > 1) {
                 // Insert a red dot between previous and next entry
                 val averageY = (previousEntry.y + nextEntry.y) / 2
-                entriesWithRedDot.add(Entry(currentEntry.x, averageY))
-                newData.add(Entry(currentEntry.x, averageY))
+                entriesWithRedDot.add(Entry(currentEntry.x-1, averageY))
+                newData.add(Entry(currentEntry.x-1, averageY))
             } else {
                 // Add regular point
                 newData.add(currentEntry)
