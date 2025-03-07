@@ -22,12 +22,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.sp
+
+
 
 
 
@@ -42,7 +46,7 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
         .fillMaxSize()
         .padding(16.dp)) {
         Column(modifier = Modifier.fillMaxSize()) {
-
+            //Title at top of screen
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -62,25 +66,81 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
                 }
             }
         }
+        // Bottom Navigation bar with home, add habit, and Stats buttons
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            FloatingActionButton(
-                onClick = {navController.navigate("addHabit")},
-                containerColor = MaterialTheme.colorScheme.primary,
+
+            Row(
                 modifier = Modifier
-                    .size(80.dp)
-                    .padding(8.dp),
-                shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(10.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.Bottom
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Habit",modifier = Modifier.size(40.dp), tint = Color.White)
+                // Home Button (Left)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(contentAlignment = Alignment.Center) {
+                        IconButton(onClick = { /* TODO: Navigation Home */ }) {
+                            Icon(
+                                Icons.Filled.Home,
+                                contentDescription = "Home",
+                                tint = Color(0xFF00897B), // Teal
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .padding(top = 4.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        "Home",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                // Add Habit button (Center)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    FloatingActionButton(
+                        onClick = { navController.navigate("addHabit") },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .padding(8.dp),
+                        shape = CircleShape,
+                        elevation = FloatingActionButtonDefaults.elevation(10.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add Habit",
+                            modifier = Modifier.size(40.dp),
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
+                }
+                // Stats button (Right)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+
+                ) {
+                    IconButton(onClick = { /* TODO: Navigation Stats */ }) {
+                        Icon(
+                            Icons.Filled.Info,
+                            contentDescription = "Stats",
+                            tint = Color(0xFF00897B),
+                            modifier = Modifier
+                                .size(50.dp)
+                                .padding(top = 4.dp)
+                        )
+                    }
+                    Text("Stats", style = MaterialTheme.typography.bodySmall)
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
