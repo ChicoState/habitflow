@@ -53,7 +53,10 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
             }
 
             // Keeps button at the bottom while scrolling through list
-            LazyColumn(modifier = Modifier.weight(1f)) {
+            LazyColumn(modifier = Modifier
+                .weight(1f)
+                .padding(bottom= 130.dp)
+            ) {
                 items(habits) { habit ->
                     HabitItem(habit, navController, goodHabit)
                 }
