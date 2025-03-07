@@ -24,6 +24,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.unit.sp
+
 
 
 
@@ -139,12 +144,29 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
     val comparisonData = if (parts[2] == "good" )
     { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
     else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
-    val progress = calculateSizePercentage(userData[2], comparisonData[2]).toString()
+    //val progress = calculateSizePercentage(userData[2], comparisonData[2]).toString()
+    val progress = ((userData[2][userData[2].size-1].x) / comparisonData[2].size * 100).toInt()
     val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
-    val upOrDown =
-        if ((isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") || (!isFirstYGreaterThanLast(userData[2]) && parts[2] == "good"))
-        { "↗\uFE0F" } else { "↘\uFE0F" }
-    val goalLength = comparisonData[2].size
+    var arrowColor = Color.Red
+    var upOrDown = "nan"
+    if (isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
+        upOrDown = "↘"
+        arrowColor = Color(0xFF006400)
+    } else if (isFirstYGreaterThanLast(userData[2]) && parts[2] == "good") {
+        upOrDown = "↘"
+        arrowColor = Color.Red
+    } else if (!isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
+        upOrDown = "↗"
+        arrowColor = Color.Red
+    } else if (!isFirstYGreaterThanLast(userData[2]) && parts[2] == "good") {
+        upOrDown = "↗"
+        arrowColor = Color(0xFF006400)
+    }
+
+    /*
+        || (!isFirstYGreaterThanLast(userData[2]) && parts[2] == "good"))
+    { "↗" } else { "↘" }
+val goalLength = comparisonData[2].size*/
 
     Card(
         modifier = Modifier
@@ -163,7 +185,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                     color = backgroundColor.copy(alpha = 0.4f),
                     shape = RoundedCornerShape(20.dp)
                 )
-                .padding(6.dp)
+                .padding(4.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -171,7 +193,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(0.5f)) {
+                Column(modifier = Modifier.weight(0.4f)) {
                     Text(
                         text = parts[0],
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
@@ -179,7 +201,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                     if (parts.size > 1) {
                         Text(
                             text = parts[1],
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 4.dp)
                         ) // Habit Description
                     }
@@ -188,14 +210,14 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                 Spacer(modifier = Modifier.width(16.dp))  // Adjust the width as needed
 
                 // Right Column: Streak and Progress
-                Column(modifier = Modifier.weight(0.5f)) {
+                Column(modifier = Modifier.weight(0.6f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // First Column for Streak test
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(.5f).padding(start=10.dp)) {
                             Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
                             Text(
                                 text = "$streak Day",
@@ -210,22 +232,29 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
                         }
                         // Second Column for Progress Emoji (Thumbs Up / Thumbs Down)
                         Column(
-                            modifier = Modifier.weight(1f).padding(end = 10.dp),
+                            modifier = Modifier.weight(.5f).padding(end = 10.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.End
                         ) {
+                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
                             Text(
-                                text = "$progress%",
+                                text = buildAnnotatedString {
+                                    append("$progress% ")
+                                    pushStyle(SpanStyle(color = arrowColor, fontSize = 34.sp))
+                                    append(upOrDown)
+                                    pop()
+                                },
                                 style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier
-                                    .padding(end = 20.dp)
-                                    .padding(top = 4.dp)
+                                /*modifier = Modifier
+                                    //.padding(end = 20.dp)
+                                    .padding(top = 4.dp)*/
                             )
                             Text(
                                 text = "Complete",
                                 style = MaterialTheme.typography.bodyMedium
                                 //modifier = Modifier.padding(end = 16.dp)
                             )
+                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
                         }
                     }
                 }

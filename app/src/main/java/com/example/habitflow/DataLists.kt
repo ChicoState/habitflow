@@ -69,10 +69,10 @@ object DataLists {
     )
     val goodMonthlyData = listOf(
         Entry(1f, 0.5f), Entry(2f, 0.5f), Entry(3f, 0.25f), Entry(4f, 0.5f), Entry(5f, 0.75f),
-        Entry(6f, 0f), Entry(7f, 0.5f), Entry(8f, 1f), Entry(9f, 0.75f), Entry(10f, 1f),
-        Entry(11f, 1.25f), Entry(12f, 0f), Entry(13f, 1f), Entry(14f, 1f), Entry(15f, 1f),
-        Entry(16f, 0f), Entry(17f, 1.5f), Entry(18f, 1.25f), Entry(19f, 1.5f), Entry(20f, 1.75f),
-        Entry(21f, 1.5f), Entry(22f, 0f), Entry(23f, 1.5f), Entry(24f, 1.75f), Entry(25f, 2f),
+        Entry(7f, 0.5f), Entry(8f, 1f), Entry(9f, 0.75f), Entry(10f, 1f),
+        Entry(11f, 1.25f), Entry(13f, 1f), Entry(14f, 1f), Entry(15f, 1f),
+        Entry(17f, 1.5f), Entry(18f, 1.25f), Entry(19f, 1.5f), Entry(20f, 1.75f),
+        Entry(21f, 1.5f), Entry(23f, 1.5f), Entry(24f, 1.75f), Entry(25f, 2f),
         Entry(26f, 2f), Entry(27f, 2f), Entry(28f, 2f), Entry(29f, 2.5f), Entry(30f, 2.5f)
     )
     val goodComparisonData2 = listOf(
