@@ -70,7 +70,7 @@ fun AddHabitScreen(navController: NavController) {
                     habits.add(habitEntry)
                     saveHabits(sharedPreferences, habits)
 
-                    navController.navigate("home?goodHabit=${good}") // Navigate back to Home
+                    navController.navigate("home/") // Navigate back to Home
                 }
             },
             modifier = Modifier.padding(top = 16.dp)
@@ -134,7 +134,7 @@ fun AddHabitScreen(navController: NavController) {
                                     habits.add(habitEntry)
                                     saveHabits(sharedPreferences, habits)
 
-                                    navController.navigate("home?goodHabit=${good}")
+                                    navController.navigate("home/")
                                 }
                             ) {
                                 Text("Save Anyway")

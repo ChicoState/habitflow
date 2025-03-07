@@ -16,6 +16,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.formatter.ValueFormatter
+import java.text.DecimalFormat
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+
 
 
 
@@ -40,7 +45,7 @@ fun ProgressScreen(navController: NavController, habit: String) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
             ) {
                 Button(
-                    onClick = { navController.navigate("home") },
+                    onClick = { navController.navigate("home/") },
                     modifier = Modifier.align(Alignment.CenterStart).height(36.dp) // Smaller button
                 ) {
                     Text("Back")
@@ -174,7 +179,7 @@ fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
             }
         )
         lineDataSets.add(
-            LineDataSet(entriesWithRedDot, "$label Red Dots").apply {
+            LineDataSet(entriesWithRedDot, "Missed").apply {
                 setDrawCircles(true) // Show points as circles
                 setCircleColor(Color.RED) // Red color for the circles
                 setCircleRadius(3f) // Set circle radius
@@ -192,6 +197,13 @@ fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
             LineChart(it).apply {
                 this.data = lineData
                 this.invalidate() // Refresh the chart with new data
+                val legend = this.legend
+                legend.isEnabled = false
+                this.description.isEnabled = false // Disable the description
+                this.axisLeft.isEnabled = true // Disable left Y axis
+                this.axisRight.isEnabled = false // Enable right Y axis
+                this.xAxis.isEnabled = true // Enable the bottom X axis
+                this.xAxis.position = XAxis.XAxisPosition.BOTTOM // Ensure it's at the bottom
             }
         },
         modifier = Modifier

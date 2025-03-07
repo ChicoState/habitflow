@@ -3,41 +3,38 @@ package com.example.habitflow
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.compose.ui.platform.LocalContext
-import org.json.JSONArray
-import org.json.JSONObject
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.graphics.Color
-import com.github.mikephil.charting.data.Entry
 import androidx.compose.ui.Alignment
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-
+import androidx.navigation.NavController
+import com.github.mikephil.charting.data.Entry
+import org.json.JSONArray
 
 
 @Composable
-fun HomeScreen(navController: NavController, goodHabit: String) {
+fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: String) {
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE) }
     var habits by remember { mutableStateOf(loadHabits(sharedPreferences)) }
-
+    var selectedHabits by remember { mutableStateOf(mutableSetOf<String>()) }
+    val onDeleteHabit: (String) -> Unit = { habit ->
+        selectedHabits.remove(habit) // Remove from selected habits set
+        habits = habits.filterNot { it == habit } // Remove habit from the list
+        saveHabits(sharedPreferences, habits) // Save the updated list to SharedPreferences
+    }
     Box(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
@@ -51,11 +48,35 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
             ) {
                 Text(text = "HabitFlow", style = MaterialTheme.typography.headlineMedium)
             }
-
+            if (isDeleting == "true") {
+                Spacer(modifier = Modifier.height(8.dp)) // Optional space between the two texts
+                Text(text = "Select habit(s) to remove:", style = MaterialTheme.typography.headlineSmall)
+            }
             // Keeps button at the bottom while scrolling through list
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(habits) { habit ->
-                    HabitItem(habit, navController, goodHabit)
+                items(habits.filter { habit -> !selectedHabits.contains(habit) }, key = { it }) { habit ->
+                    HabitItem(
+                        habit = habit,
+                        navController = navController,
+                        goodHabit = goodHabit,
+                        isDeleting = isDeleting,
+                        isSelected = selectedHabits.contains(habit),
+                        onSelect = { isSelected ->
+                            if (isSelected) {
+                                selectedHabits.add(habit)
+                            } else {
+                                selectedHabits.remove(habit)
+                            }
+                        },
+                        onDelete = { // Pass the onDelete function to HabitItem
+                            onDeleteHabit(habit)
+                        }
+                    )
+                }
+            }
+            if (habits.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No Habits Found", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -65,19 +86,77 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            FloatingActionButton(
-                onClick = {navController.navigate("addHabit")},
-                containerColor = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .size(80.dp)
-                    .padding(8.dp),
-                shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(10.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(), // Fill width to give buttons enough space
+                horizontalArrangement = Arrangement.SpaceEvenly, // Space out buttons evenly
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Habit",modifier = Modifier.size(40.dp), tint = Color.White)
+                /*if (isDeleting == "true") {
+                    // Show delete confirmation button when in delete mode
+                    Button(
+                        onClick = {
+                            // Remove selected habits
+                            habits = habits.filterNot { selectedHabits.contains(it) }
+                            saveHabits(sharedPreferences, habits) // Save updated habits to SharedPreferences
+                            selectedHabits.clear() // Clear the selection
+                            //isDeleting = "false" // Exit delete mode
+                        },
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .height(50.dp)
+                            .width(150.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Delete Selected", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }*/
+                FloatingActionButton(
+                    onClick = {
+                        if (isDeleting == "true")
+                        { navController.navigate("home/false") }
+                        else
+                        { navController.navigate("home/true") }
+
+                    },
+                    /*onClick = {
+                        isDeleting = !isDeleting
+                        if (!isDeleting) {
+                            selectedHabits.clear() // Clear selection when exiting delete mode
+                        }
+                    },*/
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .height(50.dp)
+                        .width(150.dp),
+                    shape = RoundedCornerShape(8.dp), // Rounded corners
+                    elevation = FloatingActionButtonDefaults.elevation(10.dp)
+                ) {
+                    Text(
+                        text = "Remove Habit",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White // Text color
+                    )
+                }
+
+                FloatingActionButton(
+                    onClick = { navController.navigate("addHabit") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .height(50.dp)
+                        .width(150.dp), // Make button rectangular
+                    shape = RoundedCornerShape(8.dp), // Rounded corners
+                    elevation = FloatingActionButtonDefaults.elevation(10.dp)
+                ) {
+                    Text(
+                        text = "Add Habit",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White // Text color
+                    )
+                }
+                //Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -135,9 +214,9 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 
 
 @Composable
-fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
+fun HabitItem(habit: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit, onDelete: () -> Unit) {
     val parts = habit.split(":")
-    val backgroundColor = if (parts[2] == "good") { Color(0x40A5D6A7) } else { Color(0x40FF8A80) }
+    var backgroundColor = if (parts[2] == "good") { Color(0x40A5D6A7) } else { Color(0x40FF8A80) }
     val userData = if (parts[2] == "good" )
     { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
     else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
@@ -163,26 +242,39 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String) {
         arrowColor = Color(0xFF006400)
     }
 
-    /*
-        || (!isFirstYGreaterThanLast(userData[2]) && parts[2] == "good"))
-    { "↗" } else { "↘" }
-val goalLength = comparisonData[2].size*/
+    val isPressed = remember { mutableStateOf(false) }
+    val pressedBackgroundColor = if (isPressed.value) {
+        //backgroundColor.copy(alpha = 0.8f)  // Darken color when pressed
+        backgroundColor.copy(
+            red = backgroundColor.red * 0.2f,   // reduce the red component
+            green = backgroundColor.green * 0.2f,  // reduce the green component
+            blue = backgroundColor.blue * 0.2f,    // reduce the blue component
+            alpha = 0.1f
+        )
+    } else {
+        backgroundColor.copy(alpha = 0.4f)  // Normal color when not pressed
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clickable {
-                navController.navigate("progress/${habit}")
-            },
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+            .clickable(
+                onClick = {
+                    isPressed.value = !isPressed.value
+                    if (isDeleting != "true") {
+                        navController.navigate("progress/${habit}")
+                    }
+                },
+            ),
+        colors = CardDefaults.cardColors(containerColor = pressedBackgroundColor),
         shape = RoundedCornerShape(20.dp),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    color = backgroundColor.copy(alpha = 0.4f),
+                    color = pressedBackgroundColor.copy(alpha = 0.4f),
                     shape = RoundedCornerShape(20.dp)
                 )
                 .padding(4.dp)
@@ -217,30 +309,47 @@ val goalLength = comparisonData[2].size*/
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // First Column for Streak test
-                        Column(modifier = Modifier.weight(.5f).padding(start=10.dp)) {
-                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
+                        Column(
+                            modifier = Modifier
+                                .weight(.5f)
+                                .padding(start = 10.dp)
+                        ) {
+                            Spacer(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .width(30.dp)
+                            )  // Adjust the width as needed
                             Text(
                                 text = "$streak Day",
                                 style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier//.padding(bottom = 1.dp, top = 4.dp)
                             )
                             Text(
                                 text = "Streak \uD83D\uDD25",
                                 style = MaterialTheme.typography.bodyLarge
                             )
-                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
+                            Spacer(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .width(30.dp)
+                            )  // Adjust the width as needed
                         }
                         // Second Column for Progress Emoji (Thumbs Up / Thumbs Down)
                         Column(
-                            modifier = Modifier.weight(.5f).padding(end = 10.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.End
+                            modifier = Modifier
+                                .weight(.5f)
+                                .padding(end = 10.dp)
+                            //verticalArrangement = Arrangement.Center,
+                            //horizontalAlignment = Alignment.End
                         ) {
-                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
+                            Spacer(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .width(30.dp)
+                            )  // Adjust the width as needed
                             Text(
                                 text = buildAnnotatedString {
                                     append("$progress% ")
-                                    pushStyle(SpanStyle(color = arrowColor, fontSize = 34.sp))
+                                    pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
                                     append(upOrDown)
                                     pop()
                                 },
@@ -251,14 +360,26 @@ val goalLength = comparisonData[2].size*/
                             )
                             Text(
                                 text = "Complete",
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyLarge
                                 //modifier = Modifier.padding(end = 16.dp)
                             )
-                            Spacer(modifier = Modifier.weight(1f).width(30.dp))  // Adjust the width as needed
+                            Spacer(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .width(30.dp)
+                            )  // Adjust the width as needed
                         }
                     }
                 }
             }
+        }
+    }
+    if (isDeleting == "true") {
+        Button(
+            onClick = { onDelete() },
+            modifier = Modifier.padding(start = 8.dp)
+        ) {
+            Text("Remove Habits")
         }
     }
 }
