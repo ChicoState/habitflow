@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
@@ -66,7 +67,7 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
                 }
             }
         }
-        // Bottom Navigation bar with home, add habit, and Stats buttons
+        // Bottom Navigation bar with Settings, Add Habit, and Stats buttons
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -81,13 +82,13 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.Bottom
             ) {
-                // Home Button (Left)
+                // Settings Button (Left)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(contentAlignment = Alignment.Center) {
                         IconButton(onClick = { /* TODO: Navigation Home */ }) {
                             Icon(
-                                Icons.Filled.Home,
-                                contentDescription = "Home",
+                                Icons.Filled.Settings,
+                                contentDescription = "Settings",
                                 tint = Color(0xFF00897B), // Teal
                                 modifier = Modifier
                                     .size(50.dp)
@@ -96,7 +97,7 @@ fun HomeScreen(navController: NavController, goodHabit: String) {
                         }
                     }
                     Text(
-                        "Home",
+                        "Settings",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
