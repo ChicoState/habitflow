@@ -12,6 +12,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.habitflow.ui.AddHabitScreen
 import com.example.habitflow.ui.theme.HabitflowTheme
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,8 +30,21 @@ class MainActivity : ComponentActivity() {
 
                     // Navigation between Home and Add Habit screens
                     NavHost(navController, startDestination = "home") {
-                        composable("home") { HomeScreen(navController) }
+                        composable(
+                            "home?goodHabit={goodHabit}",
+                            arguments = listOf(navArgument("goodHabit") {
+                                type = NavType.StringType
+                                defaultValue = ""
+                            })
+                            ) { backStackEntry ->
+                            val goodHabit = backStackEntry.arguments?.getString("goodHabit") ?: ""
+                            HomeScreen(navController, goodHabit)
+                        }
                         composable("addHabit") { AddHabitScreen(navController) }
+                        composable("progress/{habit}") { backStackEntry ->
+                            val habit = backStackEntry.arguments?.getString("habit")
+                            ProgressScreen(navController, habit ?: "")
+                        }
                     }
                 }
             }
