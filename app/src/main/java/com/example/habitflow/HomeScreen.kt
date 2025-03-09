@@ -28,8 +28,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Delete
-import java.security.KeyStore
-
+///removed import directive keys
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: String) {
@@ -45,15 +46,16 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
     Box(
         modifier = Modifier
         .fillMaxSize()
-        .padding(16.dp)
+        //.padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color(0x3000008B))
                     .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp)
+                    .padding(top = 20.dp, bottom = 20.dp)
             ) {
                 Text(
                     text = "HabitFlow",
@@ -71,11 +73,16 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
                         tint = Color(0xFF00897B), // Teal
                         modifier = Modifier
                             .size(50.dp)
-                            .padding(top = 4.dp)
+                            //.padding(top = 4.dp)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            /*HorizontalDivider(
+                color = Color.Gray, // You can customize the color
+                thickness = 1.dp,   // You can customize the thickness of the line
+                modifier = Modifier//.padding(vertical = 8.dp) // You can adjust padding around the divider
+            )*/
             //Additional label to show when user is in delete mode
             if (isDeleting == "true") {
                 Spacer(modifier = Modifier.height(8.dp)) // Optional space between the two texts
@@ -110,12 +117,13 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                //.padding(horizontal = 16.dp)
         ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp)
-                        .background(Color.White)
+                        .background(Color(0x1900008B))
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
@@ -298,6 +306,107 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 }
 
 
+///// Adding new helper funcitons:
+fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
+    // Find the minimum size to avoid IndexOutOfBoundsException
+    val minSize = minOf(list1.size, list2.size)
+    var count = 0
+
+    for (i in 0 until minSize) { // Loop through both lists
+        if (list1[i].y > list2[i].y) { // Compare the y values
+            count++
+        }
+    }
+
+    return count
+}
+
+fun countDaysWithSmallerY(list1: List<Entry>, list2: List<Entry>): Int {
+    // Find the minimum size to avoid IndexOutOfBoundsException
+    val minSize = minOf(list1.size, list2.size)
+    var count = 0
+
+    for (i in 0 until minSize) { // Loop through both lists
+        if (list1[i].y < list2[i].y) { // Compare the y values for smaller values
+            count++
+        }
+    }
+
+    return count
+}
+
+fun countMatchingFromEndBad(list1: List<Entry>, list2: List<Entry>): Int {
+    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
+    var count = 0
+
+    for (i in 1..minSize) { // Loop from end to start
+        if (list1[list1.size - i].y <= list2[list1.size - i].y) {
+            count++
+        } else {
+            break // Stop counting when a mismatch occurs
+        }
+    }
+
+    return count
+}
+
+fun countMatchingFromEndGood(list1: List<Entry>, list2: List<Entry>): Int {
+    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
+    var count = 0
+
+    for (i in 1..minSize) { // Loop from end to start
+        if (list1[list1.size - i].y >= list2[list1.size - i].y) {
+            count++
+        } else {
+            break // Stop counting when a mismatch occurs
+        }
+    }
+
+    return count
+}
+
+fun convertToDates(entries: List<Entry>, startDate: String): List<String> {
+    // Define the SimpleDateFormat to parse the startDate and format the resulting date
+    val sdf = SimpleDateFormat("d/M/yy", Locale.US)
+
+    // Parse the startDate to a Date object
+    val baseDate = sdf.parse(startDate)
+
+    // Convert each entry's x (which represents the number of days offset from startDate) to a date
+    val calendar = Calendar.getInstance()
+    calendar.time = baseDate
+
+    return entries.map { entry ->
+        // Add the x value (days) to the calendar
+        calendar.add(Calendar.DAY_OF_MONTH, entry.x.toInt())
+
+        // Return the new date formatted as a string
+        sdf.format(calendar.time)
+    }
+}
+
+fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
+    val resultList = mutableListOf<Entry>()
+
+    // Iterate through the indices of both lists
+    for (i in list1.indices) {
+        // Ensure both lists have the same index length and valid entry
+        if (i < list2.size) {
+            val entry1 = list1[i]
+            val entry2 = list2[i]
+
+            // Check if the y components are equal for the same x index
+            if (entry1.y == entry2.y) {
+                resultList.add(entry1) // Add the entry from list1 (or list2, they have the same y value)
+            }
+        }
+    }
+
+    return resultList
+}
+
+///////
+
 @Composable
 fun HabitItem(habit: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val parts = habit.split(":")
@@ -365,6 +474,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
+            .padding(horizontal = 16.dp)
             .clickable(
                 onClick = {
                     isPressed.value = !isPressed.value
