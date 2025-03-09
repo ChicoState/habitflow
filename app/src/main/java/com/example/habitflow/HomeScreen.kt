@@ -261,12 +261,12 @@ fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
     return false
 }
 
-fun countMatchingFromEnd(list1: List<Entry>, list2: List<Entry>): Int {
+fun countMatchingFromEndBad(list1: List<Entry>, list2: List<Entry>): Int {
     val minSize = minOf(list1.size, list2.size) // Find the smaller list size
     var count = 0
 
     for (i in 1..minSize) { // Loop from end to start
-        if (list1[list1.size - i].y <= list2[list2.size - i].y) {
+        if (list1[list1.size - i].y <= list2[list1.size - i].y) {
             count++
         } else {
             break // Stop counting when a mismatch occurs
@@ -275,6 +275,50 @@ fun countMatchingFromEnd(list1: List<Entry>, list2: List<Entry>): Int {
 
     return count
 }
+
+fun countMatchingFromEndGood(list1: List<Entry>, list2: List<Entry>): Int {
+    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
+    var count = 0
+
+    for (i in 1..minSize) { // Loop from end to start
+        if (list1[list1.size - i].y >= list2[list1.size - i].y) {
+            count++
+        } else {
+            break // Stop counting when a mismatch occurs
+        }
+    }
+
+    return count
+}
+
+fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
+    // Find the minimum size to avoid IndexOutOfBoundsException
+    val minSize = minOf(list1.size, list2.size)
+    var count = 0
+
+    for (i in 0 until minSize) { // Loop through both lists
+        if (list1[i].y > list2[i].y) { // Compare the y values
+            count++
+        }
+    }
+
+    return count
+}
+
+fun countDaysWithSmallerY(list1: List<Entry>, list2: List<Entry>): Int {
+    // Find the minimum size to avoid IndexOutOfBoundsException
+    val minSize = minOf(list1.size, list2.size)
+    var count = 0
+
+    for (i in 0 until minSize) { // Loop through both lists
+        if (list1[i].y < list2[i].y) { // Compare the y values for smaller values
+            count++
+        }
+    }
+
+    return count
+}
+
 
 fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
     val size1 = list1.size
@@ -289,6 +333,33 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 }
 
 
+fun compareEntries(list1: List<Entry>, list2: List<Entry>): List<Entry> {
+    // Ensure the two lists are the same size, if not return an empty list or handle it
+    if (list1.size != list2.size) {
+        return emptyList() // Or you can handle the case differently
+    }
+
+    // Create a new list where z is 1 if the condition is true, else 0
+    val result = mutableListOf<Entry>()
+
+    // Iterate through the lists and compare corresponding entries
+    for (i in list1.indices) {
+        val entry1 = list1[i]
+        val entry2 = list2[i]
+
+        // Check if y value in list1 is greater than or equal to y value in list2
+        val z = if (entry1.y >= entry2.y) 1 else 0
+
+        // Add the new Entry to the result list with x, y, and z
+        result.add(Entry(entry1.x, entry1.y, z))
+    }
+
+    return result
+}
+
+
+
+
 @Composable
 fun HabitItem(habit: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val parts = habit.split(":")
@@ -300,7 +371,10 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
     { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
     else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
     val progress = ((userData[2][userData[2].size-1].x) / comparisonData[2].size * 100).toInt()
-    val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
+    val streak =
+        if (parts[2] == "good")
+        { (countMatchingFromEndGood(userData[2], comparisonData[2])).toString() }
+        else { (countMatchingFromEndBad(userData[2], comparisonData[2])).toString() }
     var arrowColor = Color.Red
     var upOrDown = "nan"
     if (isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
