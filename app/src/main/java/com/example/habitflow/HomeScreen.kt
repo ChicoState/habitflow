@@ -28,7 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Delete
-
+import java.security.KeyStore
 
 
 @Composable
@@ -242,7 +242,16 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
 fun loadHabits(sharedPreferences: SharedPreferences): List<String> {
     val jsonString = sharedPreferences.getString("habits", "[]") ?: "[]"
     val jsonArray = JSONArray(jsonString)
-    return List(jsonArray.length()) { jsonArray.getString(it) }
+
+    return List(jsonArray.length()) {
+        val habit = jsonArray.getString(it)
+        if (habit.split(":").size < 3) {
+            println("Invalid habit skipped: $habit") // Debugging
+            ""
+        } else {
+            habit
+        }
+    }.filter { it.isNotEmpty() } // Remove invalid habits
 }
 
 // Function to save habits to SharedPreferences
@@ -292,29 +301,52 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 @Composable
 fun HabitItem(habit: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val parts = habit.split(":")
-    var backgroundColor = if (parts[2] == "good") { Color(0x40A5D6A7) } else { Color(0x40FF8A80) }
-    val userData = if (parts[2] == "good" )
-    { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
-    else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
-    val comparisonData = if (parts[2] == "good" )
-    { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
-    else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
-    val progress = ((userData[2][userData[2].size-1].x) / comparisonData[2].size * 100).toInt()
+    val habitName = parts.getOrNull(0) ?: "Unknown Habit"
+    val habitDescription = parts.getOrNull(1) ?: ""
+    val habitType = parts.getOrNull(2) ?: "unknown"
+
+    val backgroundColor: Color = if (habitType == "good") Color(0x40A5D6A7) else {
+        Color(0x40FF8A80)
+    }
+
+    val userData = if (habitType == "good")
+        listOf(
+            DataLists.goodWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.goodMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.goodOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+        )
+    else
+        listOf(
+            DataLists.badWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.badMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.badOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+        )
+
+    val comparisonData = if (habitType == "good") listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) else listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3)
+    val progress = if (userData.size > 2 && userData[2].isNotEmpty() && comparisonData.size > 2) {
+        ((userData[2].last().x) / comparisonData[2].size * 100).toInt()
+    } else {
+        0
+    }
     val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
     var arrowColor = Color.Red
     var upOrDown = "nan"
-    if (isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
+    if (isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
         upOrDown = "↘"
         arrowColor = Color(0xFF006400)
-    } else if (isFirstYGreaterThanLast(userData[2]) && parts[2] == "good") {
+    } else if (isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
         upOrDown = "↘"
         arrowColor = Color.Red
-    } else if (!isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
-        upOrDown = "↗"
-        arrowColor = Color.Red
-    } else if (!isFirstYGreaterThanLast(userData[2]) && parts[2] == "good") {
-        upOrDown = "↗"
-        arrowColor = Color(0xFF006400)
+    } else {
+        if (!isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
+            upOrDown = "↗"
+            arrowColor = Color.Red
+        } else {
+            if (!isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
+                upOrDown = "↗"
+                arrowColor = Color(0xFF006400)
+            }
+        }
     }
 
     val isPressed = remember { mutableStateOf(isSelected) }
