@@ -1,6 +1,6 @@
 package com.example.habitflow
 
-import android.graphics.Color
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,116 +13,186 @@ import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.formatter.ValueFormatter
-import java.text.DecimalFormat
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
-
-
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import android.graphics.Color as AndroidColor
+import androidx.compose.ui.text.font.FontWeight
 
 
 @Composable
-fun ProgressScreen(navController: NavController, habit: String) {
+fun ProgressScreen(navController: NavController, habit: String, span: String) {
     // Dummy data for cigarettes smoked each day (replace with actual data logic)
     val parts = habit.split(":")
-    val userData = if (parts[2] == "good" )
+    val userDataList = if (parts[2] == "good" )
     { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
     else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
-    val comparisonData = if (parts[2] == "good" )
+    val comparisonDataList = if (parts[2] == "good" )
     { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
     else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
-
-    LazyColumn(
+    val userData =
+        if (span == "Weekly") { userDataList[0] }
+        else if (span == "Monthly") { userDataList[1] }
+        else { userDataList[2] }
+    val comparisonData =
+        if (span == "Weekly") { comparisonDataList[0] }
+        else if (span == "Monthly") { comparisonDataList[1] }
+        else { comparisonDataList[2] }
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
-        item {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            ) {
-                Button(
-                    onClick = { navController.navigate("home/") },
-                    modifier = Modifier.align(Alignment.CenterStart).height(36.dp) // Smaller button
-                ) {
-                    Text("Back")
-                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 100.dp),
+            verticalArrangement = Arrangement.Center // Optionally, you can also center vertically if needed
 
-                Text(
-                    text = "Your Progress",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-        }
-        item {
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
+                    //.background(androidx.compose.ui.graphics.Color.Gray)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp)
             ) {
+                IconButton(
+                    onClick = { navController.navigate("home/") }, // Navigate to "home/"
+                    modifier = Modifier
+                        .size(40.dp) // Increase the size of the icon button for the bubble effect
+                        .background(
+                            color = Color(0xFFE0E0E0), // Correct Color usage
+                            shape = CircleShape // Make the background circular
+                        )
+                        .padding(5.dp)
+                        .align(Alignment.TopStart)
+
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "Back",
+                    )
+                }
                 Text(
                     text = "${parts[0]}",
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.align(Alignment.Center)
+
                 )
             }
-        }
-        item {
-            // Weekly progress section aligned to the left with line chart
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Your $span Progress",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.align(Alignment.CenterHorizontally) // This centers the text horizontally
+            )
+            /*LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            ) {
+                item {
+                    // Weekly progress section aligned to the left with line chart
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text(
+                                text = "Weekly",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            LineChartView(dataSets = listOf(userData[0], comparisonData[0]), habit)
+                        }
+                    }
+                }
+                // Spacer to add some space between the graphs
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+                */
+                // Monthly progress section aligned to the left with line chart
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp)
             ) {
                 Column(horizontalAlignment = Alignment.Start) {
-                    Text(
-                        text = "Weekly",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    LineChartView(dataSets = listOf(userData[0], comparisonData[0]), habit)
+                    LineChartView(dataSets = listOf(userData, comparisonData), habit)
                 }
             }
-        }
-        // Spacer to add some space between the graphs
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+            /*
+                // Spacer to add some space between the graphs
+                item { Spacer(modifier = Modifier.height(16.dp)) }
 
-        // Monthly progress section aligned to the left with line chart
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
+                // Overall progress section aligned to the left with line chart
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text(
+                                text = "Overall",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            LineChartView(dataSets = listOf(userData[2], comparisonData[2]), habit)
+                        }
+                    }
+                }*/
+            //}
+            Spacer(modifier = Modifier.weight(1f))
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                //.height(100.dp)
+                .align(Alignment.BottomCenter) // Align the Row at the bottom
+                .background(androidx.compose.ui.graphics.Color.White)
+                .padding(horizontal = 10.dp)
+                .padding(bottom = 16.dp), // Space at the bottom
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Button 1
+            Button(
+                onClick = {navController.navigate("progress/${habit}/Weekly") },
+                modifier = Modifier.width(85.dp).height(48.dp),
+                shape = RoundedCornerShape(5.dp),
+                contentPadding = PaddingValues(0.dp) // Removes the internal padding
+
             ) {
-                Column(horizontalAlignment = Alignment.Start) {
-                    Text(
-                        text = "Monthly",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    LineChartView(dataSets = listOf(userData[1], comparisonData[1]), habit)
-                }
+                Text(
+                    text = "Weekly"
+                )
             }
-        }
-        // Spacer to add some space between the graphs
-        item { Spacer(modifier = Modifier.height(16.dp)) }
 
-        // Overall progress section aligned to the left with line chart
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
+            // Button 2
+            Button(
+                onClick = { navController.navigate("progress/${habit}/Monthly") },
+                modifier = Modifier.width(85.dp).height(48.dp),
+                shape = RoundedCornerShape(5.dp),
+                contentPadding = PaddingValues(0.dp) // Removes the internal padding
+
             ) {
-                Column(horizontalAlignment = Alignment.Start) {
-                    Text(
-                        text = "Overall",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    LineChartView(dataSets = listOf(userData[2], comparisonData[2]), habit)
-                }
+                Text("Monthly")
+            }
+
+            // Button 3
+            Button(
+                onClick = { navController.navigate("progress/${habit}/Overall") },
+                modifier = Modifier.width(85.dp).height(48.dp),
+                shape = RoundedCornerShape(5.dp),
+                contentPadding = PaddingValues(0.dp) // Removes the internal padding
+            ) {
+                Text("Overall")
             }
         }
     }
@@ -162,17 +232,17 @@ fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
                 // Customize each dataset (e.g., colors, values, etc.)
                 when (index) {
                     0 -> {
-                        color = Color.parseColor("#006400")
+                        color = AndroidColor.parseColor("#006400")
                     }
                     1 -> {
-                        color = Color.argb(50, 0, 255, 0)
+                        color = AndroidColor.argb(128, 0, 255, 0)
                         lineWidth = 5f
                     }
                     else -> {
-                        color = Color.BLUE
+                        color = AndroidColor.BLUE
                     }
                 }
-                valueTextColor = Color.BLACK
+                valueTextColor = AndroidColor.BLACK
                 setDrawValues(false)
                 setDrawCircles(false) // Remove dots on the line
                 setDrawFilled(false)
@@ -181,9 +251,9 @@ fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
         lineDataSets.add(
             LineDataSet(entriesWithRedDot, "Missed").apply {
                 setDrawCircles(true) // Show points as circles
-                setCircleColor(Color.RED) // Red color for the circles
+                setCircleColor(AndroidColor.RED) // Red color for the circles
                 setCircleRadius(3f) // Set circle radius
-                color = Color.argb(0, 0, 0, 0)
+                color = 0x00000000
                 setDrawValues(false) // Don't draw values on the red dots
             }
         )

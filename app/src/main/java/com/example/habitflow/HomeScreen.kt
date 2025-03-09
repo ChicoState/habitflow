@@ -337,7 +337,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
                 onClick = {
                     isPressed.value = !isPressed.value
                     if (isDeleting != "true") {
-                        navController.navigate("progress/${habit}")
+                        navController.navigate("progress/${habit}/Overall")
                     }
                     else {
                         onSelect(isPressed.value) // Update selected habits list

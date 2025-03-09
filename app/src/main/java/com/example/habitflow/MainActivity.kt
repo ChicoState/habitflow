@@ -38,9 +38,10 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(navController, goodHabit = "",  isDeleting = isDeletingArg)
                         }
                         composable("addHabit") { AddHabitScreen(navController) }
-                        composable("progress/{habit}") { backStackEntry ->
-                            val habit = backStackEntry.arguments?.getString("habit")
-                            ProgressScreen(navController, habit ?: "")
+                        composable("progress/{habit}/{span}") { backStackEntry ->
+                            val habit = backStackEntry.arguments?.getString("habit") ?: ""
+                            val span = backStackEntry.arguments?.getString("span") ?: ""
+                            ProgressScreen(navController, habit = habit, span = span)
                         }
                     }
                 }
