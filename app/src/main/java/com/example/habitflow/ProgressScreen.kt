@@ -87,10 +87,10 @@ fun ProgressScreen(navController: NavController, habit: String) {
                 }
             }
         }
-            // Spacer to add some space between the graphs
+        // Spacer to add some space between the graphs
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
-            // Monthly progress section aligned to the left with line chart
+        // Monthly progress section aligned to the left with line chart
         item {
             Box(
                 modifier = Modifier
