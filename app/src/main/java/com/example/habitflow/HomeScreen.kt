@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Delete
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 
@@ -320,6 +322,7 @@ fun countDaysWithSmallerY(list1: List<Entry>, list2: List<Entry>): Int {
 }
 
 
+
 fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
     val size1 = list1.size
     val size2 = list2.size
@@ -333,30 +336,45 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 }
 
 
-fun compareEntries(list1: List<Entry>, list2: List<Entry>): List<Entry> {
-    // Ensure the two lists are the same size, if not return an empty list or handle it
-    if (list1.size != list2.size) {
-        return emptyList() // Or you can handle the case differently
-    }
+fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
+    val resultList = mutableListOf<Entry>()
 
-    // Create a new list where z is 1 if the condition is true, else 0
-    val result = mutableListOf<Entry>()
-
-    // Iterate through the lists and compare corresponding entries
+    // Iterate through the indices of both lists
     for (i in list1.indices) {
-        val entry1 = list1[i]
-        val entry2 = list2[i]
+        // Ensure both lists have the same index length and valid entry
+        if (i < list2.size) {
+            val entry1 = list1[i]
+            val entry2 = list2[i]
 
-        // Check if y value in list1 is greater than or equal to y value in list2
-        val z = if (entry1.y >= entry2.y) 1 else 0
-
-        // Add the new Entry to the result list with x, y, and z
-        result.add(Entry(entry1.x, entry1.y, z))
+            // Check if the y components are equal for the same x index
+            if (entry1.y == entry2.y) {
+                resultList.add(entry1) // Add the entry from list1 (or list2, they have the same y value)
+            }
+        }
     }
 
-    return result
+    return resultList
 }
 
+fun convertToDates(entries: List<Entry>, startDate: String): List<String> {
+    // Define the SimpleDateFormat to parse the startDate and format the resulting date
+    val sdf = SimpleDateFormat("d/M/yy", Locale.US)
+
+    // Parse the startDate to a Date object
+    val baseDate = sdf.parse(startDate)
+
+    // Convert each entry's x (which represents the number of days offset from startDate) to a date
+    val calendar = Calendar.getInstance()
+    calendar.time = baseDate
+
+    return entries.map { entry ->
+        // Add the x value (days) to the calendar
+        calendar.add(Calendar.DAY_OF_MONTH, entry.x.toInt())
+
+        // Return the new date formatted as a string
+        sdf.format(calendar.time)
+    }
+}
 
 
 

@@ -30,7 +30,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 
 
@@ -62,9 +63,8 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
         if (parts[2] == "good" )
         { countDaysWithLargerY(userDataList[2], comparisonDataList[2]) }
         else { countDaysWithSmallerY(userDataList[2], comparisonDataList[2]) }
-    //val goalMet = compareEntries(userData, comparisonData)
-    //val limitedEntries = userData
-
+    val goalMet = compareLists(userData, comparisonData)
+    val dates = convertToDates(userData, "2/5/25")
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -321,21 +321,21 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
                     )
-                    Text(
+                    /*Text(
                         text = "Goal Met",
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
-                    )
+                    )*/
                 }
 
                 // Table Data - LazyColumn with rows
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(userData.reversed()) { entry ->
+                    items(goalMet.reversed()) { entry ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 //.padding(vertical = 1.dp) // Padding between rows
-                                .background(if (userData.indexOf(entry) % 2 == 0) Color.LightGray else Color.Transparent) // Alternating row colors
+                                .background(if (goalMet.indexOf(entry) % 2 == 0) Color.LightGray else Color.Transparent) // Alternating row colors
                                 .border(1.dp, Color.Gray), // Border around each row
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -351,17 +351,17 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                                     .padding(2.dp), // Padding around text
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            Text(
-                                text = "h",
-                                    //if (parts[2] == "good" && entry.y >= comparisonData[entry.x.toInt()].y)
-                                    //{ "✅" }
-                                    //else if (parts[2] != "good" && entry.y <= comparisonData[entry.x.toInt()].y)
-                                    //{"✅"}
-                                    //else {" ❌"},
+                            /*Text(
+                                text =
+                                    if (parts[2] == "good" && entry.y >= comparisonData[userData.indexOf(entry)].y)
+                                    "✅"
+                                    else if (parts[2] != "good" && entry.y <= comparisonData[userData.indexOf(entry)].y)
+                                    "✅"
+                                    else " ❌",
                                 modifier = Modifier
                                     .padding(end = 8.dp), // Padding around text
                                 style = MaterialTheme.typography.bodyMedium
-                            )
+                            )*/
                         }
                     }
                 }
