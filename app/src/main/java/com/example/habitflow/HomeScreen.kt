@@ -28,8 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Delete
-import java.text.SimpleDateFormat
-import java.util.*
 
 
 
@@ -263,12 +261,12 @@ fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
     return false
 }
 
-fun countMatchingFromEndBad(list1: List<Entry>, list2: List<Entry>): Int {
+fun countMatchingFromEnd(list1: List<Entry>, list2: List<Entry>): Int {
     val minSize = minOf(list1.size, list2.size) // Find the smaller list size
     var count = 0
 
     for (i in 1..minSize) { // Loop from end to start
-        if (list1[list1.size - i].y <= list2[list1.size - i].y) {
+        if (list1[list1.size - i].y <= list2[list2.size - i].y) {
             count++
         } else {
             break // Stop counting when a mismatch occurs
@@ -277,51 +275,6 @@ fun countMatchingFromEndBad(list1: List<Entry>, list2: List<Entry>): Int {
 
     return count
 }
-
-fun countMatchingFromEndGood(list1: List<Entry>, list2: List<Entry>): Int {
-    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
-    var count = 0
-
-    for (i in 1..minSize) { // Loop from end to start
-        if (list1[list1.size - i].y >= list2[list1.size - i].y) {
-            count++
-        } else {
-            break // Stop counting when a mismatch occurs
-        }
-    }
-
-    return count
-}
-
-fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
-    // Find the minimum size to avoid IndexOutOfBoundsException
-    val minSize = minOf(list1.size, list2.size)
-    var count = 0
-
-    for (i in 0 until minSize) { // Loop through both lists
-        if (list1[i].y > list2[i].y) { // Compare the y values
-            count++
-        }
-    }
-
-    return count
-}
-
-fun countDaysWithSmallerY(list1: List<Entry>, list2: List<Entry>): Int {
-    // Find the minimum size to avoid IndexOutOfBoundsException
-    val minSize = minOf(list1.size, list2.size)
-    var count = 0
-
-    for (i in 0 until minSize) { // Loop through both lists
-        if (list1[i].y < list2[i].y) { // Compare the y values for smaller values
-            count++
-        }
-    }
-
-    return count
-}
-
-
 
 fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
     val size1 = list1.size
@@ -336,48 +289,6 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 }
 
 
-fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
-    val resultList = mutableListOf<Entry>()
-
-    // Iterate through the indices of both lists
-    for (i in list1.indices) {
-        // Ensure both lists have the same index length and valid entry
-        if (i < list2.size) {
-            val entry1 = list1[i]
-            val entry2 = list2[i]
-
-            // Check if the y components are equal for the same x index
-            if (entry1.y == entry2.y) {
-                resultList.add(entry1) // Add the entry from list1 (or list2, they have the same y value)
-            }
-        }
-    }
-
-    return resultList
-}
-
-fun convertToDates(entries: List<Entry>, startDate: String): List<String> {
-    // Define the SimpleDateFormat to parse the startDate and format the resulting date
-    val sdf = SimpleDateFormat("d/M/yy", Locale.US)
-
-    // Parse the startDate to a Date object
-    val baseDate = sdf.parse(startDate)
-
-    // Convert each entry's x (which represents the number of days offset from startDate) to a date
-    val calendar = Calendar.getInstance()
-    calendar.time = baseDate
-
-    return entries.map { entry ->
-        // Add the x value (days) to the calendar
-        calendar.add(Calendar.DAY_OF_MONTH, entry.x.toInt())
-
-        // Return the new date formatted as a string
-        sdf.format(calendar.time)
-    }
-}
-
-
-
 @Composable
 fun HabitItem(habit: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val parts = habit.split(":")
@@ -389,10 +300,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
     { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
     else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
     val progress = ((userData[2][userData[2].size-1].x) / comparisonData[2].size * 100).toInt()
-    val streak =
-        if (parts[2] == "good")
-        { (countMatchingFromEndGood(userData[2], comparisonData[2])).toString() }
-        else { (countMatchingFromEndBad(userData[2], comparisonData[2])).toString() }
+    val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
     var arrowColor = Color.Red
     var upOrDown = "nan"
     if (isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
