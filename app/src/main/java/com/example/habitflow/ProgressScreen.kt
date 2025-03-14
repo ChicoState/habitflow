@@ -1,7 +1,10 @@
 package com.example.habitflow
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -19,9 +22,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import android.graphics.Color as AndroidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+///// new import
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 
 @Composable
@@ -42,6 +52,29 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
         if (span == "Weekly") { comparisonDataList[0] }
         else if (span == "Monthly") { comparisonDataList[1] }
         else { comparisonDataList[2] }
+
+
+    ////// Adding in variables for calculating streak, progress, and overacheiver data, and dates
+
+
+    val progress = ((userDataList[2][userDataList[2].size-1].x) / comparisonDataList[2].size * 100) //.toFloat()
+    val streak =
+        if (parts[2] == "good")
+        { (countMatchingFromEndGood(userDataList[2], comparisonDataList[2])) }
+        else { (countMatchingFromEndBad(userDataList[2], comparisonDataList[2])) }
+
+    val larger =
+        if (parts[2] == "good" )
+        { countDaysWithLargerY(userDataList[2], comparisonDataList[2]) }
+        else { countDaysWithSmallerY(userDataList[2], comparisonDataList[2]) }
+    val goalMet = compareLists(userData, comparisonData)
+    val dates = convertToDates(userData, "2/5/25")
+
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -50,8 +83,8 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 100.dp),
-            verticalArrangement = Arrangement.Center // Optionally, you can also center vertically if needed
+                .padding(bottom = 16.dp), /// changed padding to be less
+            horizontalAlignment = Alignment.CenterHorizontally // Optionally, you can also center vertically if needed
 
         ) {
             Box(
@@ -74,12 +107,12 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
 
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                     )
                 }
                 Text(
-                    text = "${parts[0]}",
+                    text = parts[0],
                     style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.align(Alignment.Center)
 
@@ -87,37 +120,206 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
             }
             Spacer(modifier = Modifier.height(16.dp))
 
+
+            //////////////////// Adding in three top rows for prgoress, streak, and overacheiver
+
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp), // Add padding as necessary
+                horizontalArrangement = Arrangement.Start, // Align items to the left
+                verticalAlignment = Alignment.CenterVertically // Align vertically in the center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(45.dp)
+                        .background(Color.White, shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val canvasSize = size.minDimension
+                        val radius = canvasSize / 2f
+                        val sweepAngle = 360f * (progress / 100f)
+
+                        // Draw the full circle
+                        drawCircle(
+                            color = Color.Gray.copy(alpha = 0.3f),
+                            radius = radius
+                        )
+
+                        // Draw the filled portion of the pie chart
+                        drawArc(
+                            color = Color(0xFF00C853), // Green color for the filled portion
+                            startAngle = -90f, // Starting from the top
+                            sweepAngle = sweepAngle, // Percentage-based angle
+                            useCenter = true,
+                            size = Size(canvasSize, canvasSize)
+                        )
+                    }
+
+                    // Display the percentage inside the pie chart
+                    Text(
+                        text = "${progress.toInt()}%",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.padding(5.dp))
+                Text(
+                    text = "You have completed ${userDataList[2].size} days of your ${comparisonDataList[2].size} day goal! ",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp) // Adjust font size as needed
+                )
+            }
+            //Spacer(modifier = Modifier.weight(1f))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp), // Add padding as necessary
+                horizontalArrangement = Arrangement.Start, // Align items to the left
+                verticalAlignment = Alignment.CenterVertically // Align vertically in the center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp) // You can change the size according to your needs
+                        .background(Color.Transparent), // Ensures background is transparent
+                    //contentAlignment = Alignment.Center
+                ) {
+                    // Fire emoji as background
+                    Text(
+                        text = "🔥",
+                        style = TextStyle(
+                            fontSize = 45.sp, // Adjust the emoji size
+                            color = Color.Gray.copy(alpha = 0.7f), // You can adjust the color of the emoji
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        modifier = Modifier
+                            .align(Alignment.Center), // Center the text vertically over the emoji
+                        textAlign = TextAlign.Center // Center the fire emoji
+                    )
+
+                    // Text on top of the fire emoji
+                    Text(
+                        text = "$streak",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .align(Alignment.Center), // Center the text vertically over the emoji
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Spacer(modifier = Modifier.padding(5.dp))
+                Text(
+                    text = "You have reached $streak consecutive days of reaching your daily goal! ",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp) // Adjust font size as needed
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp), // Add padding as necessary
+                horizontalArrangement = Arrangement.Start, // Align items to the left
+                verticalAlignment = Alignment.CenterVertically // Align vertically in the center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp) // You can change the size according to your needs
+                        .background(Color.Transparent), // Ensures background is transparent
+                    //contentAlignment = Alignment.Center
+                ) {
+                    // Fire emoji as background
+                    Text(
+                        text = "⭐",
+                        style = TextStyle(
+                            fontSize = 45.sp, // Adjust the emoji size
+                            color = Color.Gray.copy(alpha = 0.6f), // You can adjust the color of the emoji
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        modifier = Modifier
+                            .align(Alignment.Center), // Center the text vertically over the emoji
+                        textAlign = TextAlign.Center // Center the fire emoji
+                    )
+
+                    // Text on top of the fire emoji
+                    Text(
+                        text = "$larger",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .align(Alignment.Center), // Center the text vertically over the emoji
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Spacer(modifier = Modifier.padding(5.dp))
+                Text(
+                    text = "You have reached a total of $larger days of exceeding your daily goal! ",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp) // Adjust font size as needed
+                )
+            }
+
+
+            //////////////////////////////////////////////////////////////////////////////////
+
+
+            //////////////// Moving buttons to the middle of the screen: weekly, montly, and overall
+
+
+            Spacer(modifier = Modifier.padding(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    //.align(Alignment.BottomCenter) // Align the Row at the bottom
+                    //.background(androidx.compose.ui.graphics.Color.White)
+                    .padding(horizontal = 10.dp)
+                    .padding(bottom = 16.dp), // Space at the bottom
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Button 1
+                Button(
+                    onClick = { navController.navigate("progress/${habit}/Weekly") },
+                    modifier = Modifier.width(85.dp).height(48.dp),
+                    shape = RoundedCornerShape(5.dp),
+                    contentPadding = PaddingValues(0.dp) // Removes the internal padding
+
+                ) {
+                    Text(
+                        text = "Weekly"
+                    )
+                }
+
+                // Button 2
+                Button(
+                    onClick = { navController.navigate("progress/${habit}/Monthly") },
+                    modifier = Modifier.width(85.dp).height(48.dp),
+                    shape = RoundedCornerShape(5.dp),
+                    contentPadding = PaddingValues(0.dp) // Removes the internal padding
+
+                ) {
+                    Text("Monthly")
+                }
+
+                // Button 3
+                Button(
+                    onClick = { navController.navigate("progress/${habit}/Overall") },
+                    modifier = Modifier.width(85.dp).height(48.dp),
+                    shape = RoundedCornerShape(5.dp),
+                    contentPadding = PaddingValues(0.dp) // Removes the internal padding
+                ) {
+                    Text("Overall")
+                }
+            }
+            Spacer(modifier = Modifier.padding(8.dp))
+
+
+            ////////////////////////////////////////////////////////////////////////////////////
+
+
             Text(
-                text = "Your $span Progress",
+                text = "$span Progress",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.align(Alignment.CenterHorizontally) // This centers the text horizontally
             )
-            /*LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-            ) {
-                item {
-                    // Weekly progress section aligned to the left with line chart
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(
-                                text = "Weekly",
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            LineChartView(dataSets = listOf(userData[0], comparisonData[0]), habit)
-                        }
-                    }
-                }
-                // Spacer to add some space between the graphs
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-                */
-                // Monthly progress section aligned to the left with line chart
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -127,73 +329,64 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                     LineChartView(dataSets = listOf(userData, comparisonData), habit)
                 }
             }
-            /*
-                // Spacer to add some space between the graphs
-                item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                // Overall progress section aligned to the left with line chart
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.Start) {
+
+            /////////////////////////////////////////////// Adding table with userData components
+
+
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                // Table Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.LightGray) // Background color for the header
+                        .padding(8.dp), // Padding around header text
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Day",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
+                    )
+                    Text(
+                        text = "Your Data",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
+                    )
+                }
+
+                // Table Data - LazyColumn with rows
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(goalMet.reversed()) { entry ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                //.padding(vertical = 1.dp) // Padding between rows
+                                .background(if (goalMet.indexOf(entry) % 2 == 0) Color.LightGray else Color.Transparent) // Alternating row colors
+                                .border(1.dp, Color.Gray), // Border around each row
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Text(
-                                text = "Overall",
-                                style = MaterialTheme.typography.headlineSmall
+                                text = entry.x.toString(),
+                                modifier = Modifier
+                                    .padding(start = 8.dp), // Padding around text
+                                style = MaterialTheme.typography.bodyMedium
                             )
-                            LineChartView(dataSets = listOf(userData[2], comparisonData[2]), habit)
+                            Text(
+                                text = entry.y.toString(),
+                                modifier = Modifier
+                                    .padding(2.dp), // Padding around text
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
                     }
-                }*/
-            //}
-            Spacer(modifier = Modifier.weight(1f))
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                //.height(100.dp)
-                .align(Alignment.BottomCenter) // Align the Row at the bottom
-                .background(androidx.compose.ui.graphics.Color.White)
-                .padding(horizontal = 10.dp)
-                .padding(bottom = 16.dp), // Space at the bottom
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Button 1
-            Button(
-                onClick = {navController.navigate("progress/${habit}/Weekly") },
-                modifier = Modifier.width(85.dp).height(48.dp),
-                shape = RoundedCornerShape(5.dp),
-                contentPadding = PaddingValues(0.dp) // Removes the internal padding
-
-            ) {
-                Text(
-                    text = "Weekly"
-                )
+                }
             }
 
-            // Button 2
-            Button(
-                onClick = { navController.navigate("progress/${habit}/Monthly") },
-                modifier = Modifier.width(85.dp).height(48.dp),
-                shape = RoundedCornerShape(5.dp),
-                contentPadding = PaddingValues(0.dp) // Removes the internal padding
 
-            ) {
-                Text("Monthly")
-            }
+            ///////////////////////////////////////////////////////////////////////////////////
 
-            // Button 3
-            Button(
-                onClick = { navController.navigate("progress/${habit}/Overall") },
-                modifier = Modifier.width(85.dp).height(48.dp),
-                shape = RoundedCornerShape(5.dp),
-                contentPadding = PaddingValues(0.dp) // Removes the internal padding
-            ) {
-                Text("Overall")
-            }
+
         }
     }
 }

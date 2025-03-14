@@ -1,15 +1,43 @@
 package com.example.habitflow
 
-import android.content.Context
-import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,67 +49,97 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.github.mikephil.charting.data.Entry
-import org.json.JSONArray
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Delete
-
-
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @Composable
-fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: String) {
+fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting: String) {
     val context = LocalContext.current
-    val sharedPreferences = remember { context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE) }
-    var habits by remember { mutableStateOf(loadHabits(sharedPreferences)) }
-    var selectedHabits by remember { mutableStateOf(mutableSetOf<String>()) }
+    var habits by remember { mutableStateOf<List<String>>(emptyList()) }
+    val user = Firebase.auth.currentUser
+    val db = Firebase.firestore
+
+    LaunchedEffect(user) {
+        if (user != null) {
+            loadHabitsFromFirestore(user) { fetchedHabits ->
+                habits = fetchedHabits
+            }
+        }
+    }
+    val selectedHabits by remember { mutableStateOf(mutableSetOf<String>()) }
     val onDeleteSelectedHabits: () -> Unit = {
-        habits = habits.filterNot { selectedHabits.contains(it) } // Remove selected habits
-        saveHabits(sharedPreferences, habits) // Save updated habits to SharedPreferences
-        selectedHabits.clear() // Clear the selected habits list
+        val user = Firebase.auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            val userDoc = db.collection("users").document(user.uid)
+
+            userDoc.get().addOnSuccessListener { document ->
+                val currentHabits = (document.get("habits") as? List<*>)?.filterIsInstance<String>()?.toMutableList() ?: mutableListOf()
+
+                selectedHabits.forEach { habit ->
+                    currentHabits.remove(habit) // Remove habit locally
+                }
+
+                userDoc.update("habits", currentHabits) // Update Firestore
+                    .addOnSuccessListener {
+                        println("Selected habits deleted successfully.")
+                        selectedHabits.clear()
+                        habits = currentHabits // ✅ Immediately update the UI state
+                    }
+                    .addOnFailureListener { e ->
+                        println("Error deleting habits: $e")
+                    }
+            }
+        }
     }
     Box(
         modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)
+            .fillMaxSize()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color(0x3000008B))
                     .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp)
+                    .padding(top = 20.dp, bottom = 20.dp)
             ) {
-                Text(
-                    text = "HabitFlow",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                Column(modifier = Modifier.align(Alignment.Center)) {
+                    Text(
+                        text = "HabitFlow",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    user?.let {
+                        Text(
+                            text = it.displayName ?: "User",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
                 IconButton(
-                    onClick = { /* TODO: Navigation Home */ },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
+                    onClick = { navController.navigate("settings") },
+                    modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Icon(
                         Icons.Filled.Settings,
                         contentDescription = "Settings",
-                        tint = Color(0xFF00897B), // Teal
-                        modifier = Modifier
-                            .size(50.dp)
-                            .padding(top = 4.dp)
+                        tint = Color(0xFF00897B),
+                        modifier = Modifier.size(50.dp)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            //Additional label to show when user is in delete mode
+            Spacer(modifier = Modifier.height(12.dp))
             if (isDeleting == "true") {
-                Spacer(modifier = Modifier.height(8.dp)) // Optional space between the two texts
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Select habit(s) to remove:", style = MaterialTheme.typography.headlineSmall)
             }
-            // Keeps button at the bottom while scrolling through list
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(habits.filter { habit -> !selectedHabits.contains(habit) }, key = { it }) { habit ->
                     HabitItem(
@@ -100,22 +158,23 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
                     )
                 }
             }
-            // If there are currently no habits, show this message
             if (habits.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No Habits Found", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
+
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                //.padding(horizontal = 16.dp)
         ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp)
-                        .background(Color.White)
+                        .background(Color(0x1900008B))
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
@@ -237,21 +296,6 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
     }
 }
 
-
-// Function to load habits from SharedPreferences
-fun loadHabits(sharedPreferences: SharedPreferences): List<String> {
-    val jsonString = sharedPreferences.getString("habits", "[]") ?: "[]"
-    val jsonArray = JSONArray(jsonString)
-    return List(jsonArray.length()) { jsonArray.getString(it) }
-}
-
-// Function to save habits to SharedPreferences
-fun saveHabits(sharedPreferences: SharedPreferences, habits: List<String>) {
-    val editor = sharedPreferences.edit()
-    editor.putString("habits", JSONArray(habits).toString())
-    editor.apply()
-}
-
 fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
     if (list.isNotEmpty()) {
         val firstY = list.first().y
@@ -289,32 +333,156 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 }
 
 
+///// Adding new helper functions:
+fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
+    // Find the minimum size to avoid IndexOutOfBoundsException
+    val minSize = minOf(list1.size, list2.size)
+    var count = 0
+
+    for (i in 0 until minSize) { // Loop through both lists
+        if (list1[i].y > list2[i].y) { // Compare the y values
+            count++
+        }
+    }
+
+    return count
+}
+
+fun countDaysWithSmallerY(list1: List<Entry>, list2: List<Entry>): Int {
+    // Find the minimum size to avoid IndexOutOfBoundsException
+    val minSize = minOf(list1.size, list2.size)
+    var count = 0
+
+    for (i in 0 until minSize) { // Loop through both lists
+        if (list1[i].y < list2[i].y) { // Compare the y values for smaller values
+            count++
+        }
+    }
+
+    return count
+}
+
+fun countMatchingFromEndBad(list1: List<Entry>, list2: List<Entry>): Int {
+    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
+    var count = 0
+
+    for (i in 1..minSize) { // Loop from end to start
+        if (list1[list1.size - i].y <= list2[list1.size - i].y) {
+            count++
+        } else {
+            break // Stop counting when a mismatch occurs
+        }
+    }
+
+    return count
+}
+
+fun countMatchingFromEndGood(list1: List<Entry>, list2: List<Entry>): Int {
+    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
+    var count = 0
+
+    for (i in 1..minSize) { // Loop from end to start
+        if (list1[list1.size - i].y >= list2[list1.size - i].y) {
+            count++
+        } else {
+            break // Stop counting when a mismatch occurs
+        }
+    }
+
+    return count
+}
+
+fun convertToDates(entries: List<Entry>, startDate: String): List<String> {
+    // Define the SimpleDateFormat to parse the startDate and format the resulting date
+    val sdf = SimpleDateFormat("d/M/yy", Locale.US)
+
+    // Parse the startDate to a Date object
+    val baseDate = sdf.parse(startDate)
+
+    // Convert each entry's x (which represents the number of days offset from startDate) to a date
+    val calendar = Calendar.getInstance()
+    calendar.time = baseDate ?: Date() /* Use default date if null */
+
+    return entries.map { entry ->
+        // Add the x value (days) to the calendar
+        calendar.add(Calendar.DAY_OF_MONTH, entry.x.toInt())
+
+        // Return the new date formatted as a string
+        sdf.format(calendar.time)
+    }
+}
+
+fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
+    val resultList = mutableListOf<Entry>()
+
+    // Iterate through the indices of both lists
+    for (i in list1.indices) {
+        // Ensure both lists have the same index length and valid entry
+        if (i < list2.size) {
+            val entry1 = list1[i]
+            val entry2 = list2[i]
+
+            // Check if the y components are equal for the same x index
+            if (entry1.y == entry2.y) {
+                resultList.add(entry1) // Add the entry from list1 (or list2, they have the same y value)
+            }
+        }
+    }
+
+    return resultList
+}
+
+///////
+
 @Composable
 fun HabitItem(habit: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val parts = habit.split(":")
-    var backgroundColor = if (parts[2] == "good") { Color(0x40A5D6A7) } else { Color(0x40FF8A80) }
-    val userData = if (parts[2] == "good" )
-    { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
-    else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
-    val comparisonData = if (parts[2] == "good" )
-    { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
-    else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
-    val progress = ((userData[2][userData[2].size-1].x) / comparisonData[2].size * 100).toInt()
+    val habitName = parts.getOrNull(0) ?: "Unknown Habit"
+    val habitDescription = parts.getOrNull(1) ?: ""
+    val habitType = parts.getOrNull(2) ?: "unknown"
+
+    val backgroundColor: Color = if (habitType == "good") Color(0x40A5D6A7) else {
+        Color(0x40FF8A80)
+    }
+
+    val userData = if (habitType == "good")
+        listOf(
+            DataLists.goodWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.goodMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.goodOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+        )
+    else
+        listOf(
+            DataLists.badWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.badMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+            DataLists.badOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+        )
+
+    val comparisonData = if (habitType == "good") listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) else listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3)
+    val progress = if (userData.size > 2 && userData[2].isNotEmpty() && comparisonData.size > 2) {
+        ((userData[2].last().x) / comparisonData[2].size * 100).toInt()
+    } else {
+        0
+    }
     val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
     var arrowColor = Color.Red
     var upOrDown = "nan"
-    if (isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
+    if (isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
         upOrDown = "↘"
         arrowColor = Color(0xFF006400)
-    } else if (isFirstYGreaterThanLast(userData[2]) && parts[2] == "good") {
+    } else if (isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
         upOrDown = "↘"
         arrowColor = Color.Red
-    } else if (!isFirstYGreaterThanLast(userData[2]) && parts[2] != "good") {
-        upOrDown = "↗"
-        arrowColor = Color.Red
-    } else if (!isFirstYGreaterThanLast(userData[2]) && parts[2] == "good") {
-        upOrDown = "↗"
-        arrowColor = Color(0xFF006400)
+    } else {
+        if (!isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
+            upOrDown = "↗"
+            arrowColor = Color.Red
+        } else {
+            if (!isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
+                upOrDown = "↗"
+                arrowColor = Color(0xFF006400)
+            }
+        }
     }
 
     val isPressed = remember { mutableStateOf(isSelected) }
@@ -333,6 +501,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
+            .padding(horizontal = 16.dp)
             .clickable(
                 onClick = {
                     isPressed.value = !isPressed.value
