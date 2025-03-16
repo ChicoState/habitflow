@@ -85,7 +85,7 @@ fun SettingsScreen(
             Icon(
                 imageVector = Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = Color.Black
+                tint = if(darkMode) Color.White else Color.Black
             )
         }
 
