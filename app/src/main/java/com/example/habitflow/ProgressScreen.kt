@@ -1,9 +1,10 @@
 package com.example.habitflow
 
-import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -21,18 +22,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import android.graphics.Color as AndroidColor
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.border
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.unit.sp
+///// new import
 import androidx.compose.foundation.lazy.items
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 
 @Composable
@@ -53,6 +52,11 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
         if (span == "Weekly") { comparisonDataList[0] }
         else if (span == "Monthly") { comparisonDataList[1] }
         else { comparisonDataList[2] }
+
+
+    ////// Adding in variables for calculating streak, progress, and overacheiver data, and dates
+
+
     val progress = ((userDataList[2][userDataList[2].size-1].x) / comparisonDataList[2].size * 100) //.toFloat()
     val streak =
         if (parts[2] == "good")
@@ -65,6 +69,12 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
         else { countDaysWithSmallerY(userDataList[2], comparisonDataList[2]) }
     val goalMet = compareLists(userData, comparisonData)
     val dates = convertToDates(userData, "2/5/25")
+
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -73,9 +83,8 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 16.dp),
-            //verticalArrangement = Arrangement.Center // Optionally, you can also center vertically if needed
-            horizontalAlignment = Alignment.CenterHorizontally // Centers items horizontally
+                .padding(bottom = 16.dp), /// changed padding to be less
+            horizontalAlignment = Alignment.CenterHorizontally // Optionally, you can also center vertically if needed
 
         ) {
             Box(
@@ -98,18 +107,23 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
 
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                     )
                 }
                 Text(
-                    text = "${parts[0]}",
+                    text = parts[0],
                     style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.align(Alignment.Center)
 
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
+
+
+            //////////////////// Adding in three top rows for prgoress, streak, and overacheiver
+
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -242,12 +256,20 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp) // Adjust font size as needed
                 )
             }
+
+
+            //////////////////////////////////////////////////////////////////////////////////
+
+
+            //////////////// Moving buttons to the middle of the screen: weekly, montly, and overall
+
+
             Spacer(modifier = Modifier.padding(16.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     //.align(Alignment.BottomCenter) // Align the Row at the bottom
-                    .background(androidx.compose.ui.graphics.Color.White)
+                    //.background(androidx.compose.ui.graphics.Color.White)
                     .padding(horizontal = 10.dp)
                     .padding(bottom = 16.dp), // Space at the bottom
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -288,8 +310,13 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                 }
             }
             Spacer(modifier = Modifier.padding(8.dp))
+
+
+            ////////////////////////////////////////////////////////////////////////////////////
+
+
             Text(
-                text = "Your $span Progress",
+                text = "$span Progress",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.align(Alignment.CenterHorizontally) // This centers the text horizontally
             )
@@ -302,6 +329,11 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                     LineChartView(dataSets = listOf(userData, comparisonData), habit)
                 }
             }
+
+
+            /////////////////////////////////////////////// Adding table with userData components
+
+
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 // Table Header
                 Row(
@@ -321,11 +353,6 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                         modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
                     )
-                    /*Text(
-                        text = "Goal Met",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
-                    )*/
                 }
 
                 // Table Data - LazyColumn with rows
@@ -351,21 +378,15 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                                     .padding(2.dp), // Padding around text
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            /*Text(
-                                text =
-                                    if (parts[2] == "good" && entry.y >= comparisonData[userData.indexOf(entry)].y)
-                                    "✅"
-                                    else if (parts[2] != "good" && entry.y <= comparisonData[userData.indexOf(entry)].y)
-                                    "✅"
-                                    else " ❌",
-                                modifier = Modifier
-                                    .padding(end = 8.dp), // Padding around text
-                                style = MaterialTheme.typography.bodyMedium
-                            )*/
                         }
                     }
                 }
             }
+
+
+            ///////////////////////////////////////////////////////////////////////////////////
+
+
         }
     }
 }
