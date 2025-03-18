@@ -1,15 +1,43 @@
 package com.example.habitflow
 
-import android.content.Context
-import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,32 +49,58 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.github.mikephil.charting.data.Entry
-import org.json.JSONArray
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Delete
-///removed import directive keys
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @Composable
-fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: String) {
+fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting: String) {
     val context = LocalContext.current
-    val sharedPreferences = remember { context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE) }
-    var habits by remember { mutableStateOf(loadHabits(sharedPreferences)) }
-    var selectedHabits by remember { mutableStateOf(mutableSetOf<String>()) }
+    var habits by remember { mutableStateOf<List<String>>(emptyList()) }
+    val user = Firebase.auth.currentUser
+    val db = Firebase.firestore
+
+    LaunchedEffect(user) {
+        if (user != null) {
+            loadHabitsFromFirestore(user) { fetchedHabits ->
+                habits = fetchedHabits
+            }
+        }
+    }
+    val selectedHabits by remember { mutableStateOf(mutableSetOf<String>()) }
     val onDeleteSelectedHabits: () -> Unit = {
-        habits = habits.filterNot { selectedHabits.contains(it) } // Remove selected habits
-        saveHabits(sharedPreferences, habits) // Save updated habits to SharedPreferences
-        selectedHabits.clear() // Clear the selected habits list
+        val user = Firebase.auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            val userDoc = db.collection("users").document(user.uid)
+
+            userDoc.get().addOnSuccessListener { document ->
+                val currentHabits = (document.get("habits") as? List<*>)?.filterIsInstance<String>()?.toMutableList() ?: mutableListOf()
+
+                selectedHabits.forEach { habit ->
+                    currentHabits.remove(habit) // Remove habit locally
+                }
+
+                userDoc.update("habits", currentHabits) // Update Firestore
+                    .addOnSuccessListener {
+                        println("Selected habits deleted successfully.")
+                        selectedHabits.clear()
+                        habits = currentHabits // ✅ Immediately update the UI state
+                    }
+                    .addOnFailureListener { e ->
+                        println("Error deleting habits: $e")
+                    }
+            }
+        }
     }
     Box(
         modifier = Modifier
             .fillMaxSize()
-        //.padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -57,38 +111,35 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
                     .padding(horizontal = 16.dp)
                     .padding(top = 20.dp, bottom = 20.dp)
             ) {
-                Text(
-                    text = "HabitFlow",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                Column(modifier = Modifier.align(Alignment.Center)) {
+                    Text(
+                        text = "HabitFlow",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    user?.let {
+                        Text(
+                            text = it.displayName ?: "User",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
                 IconButton(
-                    onClick = { /* TODO: Navigation Home */ },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
+                    onClick = { navController.navigate("settings") },
+                    modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Icon(
                         Icons.Filled.Settings,
                         contentDescription = "Settings",
-                        tint = Color(0xFF00897B), // Teal
-                        modifier = Modifier
-                            .size(50.dp)
-                        //.padding(top = 4.dp)
+                        tint = Color(0xFF00897B),
+                        modifier = Modifier.size(50.dp)
                     )
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            /*HorizontalDivider(
-                color = Color.Gray, // You can customize the color
-                thickness = 1.dp,   // You can customize the thickness of the line
-                modifier = Modifier//.padding(vertical = 8.dp) // You can adjust padding around the divider
-            )*/
-            //Additional label to show when user is in delete mode
             if (isDeleting == "true") {
-                Spacer(modifier = Modifier.height(8.dp)) // Optional space between the two texts
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Select habit(s) to remove:", style = MaterialTheme.typography.headlineSmall)
             }
-            // Keeps button at the bottom while scrolling through list
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(habits.filter { habit -> !selectedHabits.contains(habit) }, key = { it }) { habit ->
                     HabitItem(
@@ -107,166 +158,142 @@ fun HomeScreen(navController: NavController, goodHabit: String, isDeleting: Stri
                     )
                 }
             }
-            // If there are currently no habits, show this message
             if (habits.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No Habits Found", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
+
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-            //.padding(horizontal = 16.dp)
+                //.padding(horizontal = 16.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(Color(0x1900008B))
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isDeleting != "true") {
-                    // Delete Button (Left)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(contentAlignment = Alignment.Center) {
-                            IconButton(
-                                onClick = {
-                                    if (isDeleting == "true") {
-                                        navController.navigate("home/false")
-                                    } else {
-                                        navController.navigate("home/true")
-                                    }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(Color(0x1900008B))
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isDeleting != "true") {
+                        // Delete Button (Left)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(contentAlignment = Alignment.Center) {
+                                IconButton(
+                                    onClick = {
+                                        if (isDeleting == "true") {
+                                            navController.navigate("home/false")
+                                        } else {
+                                            navController.navigate("home/true")
+                                        }
 
-                                }) {
+                                    }) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "Delete",
+                                        tint = Color(0xFF00897B), // Teal
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .padding(top = 4.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                "Delete",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+
+                        // Add Habit button (Center)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            FloatingActionButton(
+                                onClick = { navController.navigate("addHabit") },
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .padding(8.dp),
+                                shape = CircleShape,
+                                elevation = FloatingActionButtonDefaults.elevation(10.dp)
+                            ) {
                                 Icon(
-                                    Icons.Filled.Delete,
-                                    contentDescription = "Delete",
-                                    tint = Color(0xFF00897B), // Teal
+                                    Icons.Default.Add,
+                                    contentDescription = "Add Habit",
+                                    modifier = Modifier.size(40.dp),
+                                    tint = Color.White
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
+                        }
+                        // Stats button (Right)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+
+                        ) {
+                            IconButton(onClick = { /* TODO: Navigation Stats */ }) {
+                                Icon(
+                                    Icons.Filled.Info,
+                                    contentDescription = "Stats",
+                                    tint = Color(0xFF00897B),
                                     modifier = Modifier
                                         .size(50.dp)
                                         .padding(top = 4.dp)
                                 )
                             }
+                            Text("Stats", style = MaterialTheme.typography.bodySmall)
                         }
-                        Text(
-                            "Delete",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
                     }
-
-                    // Add Habit button (Center)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        FloatingActionButton(
-                            onClick = { navController.navigate("addHabit") },
-                            containerColor = MaterialTheme.colorScheme.primary,
+                    if (isDeleting == "true") {
+                        Row(
                             modifier = Modifier
-                                .size(80.dp)
-                                .padding(8.dp),
-                            shape = CircleShape,
-                            elevation = FloatingActionButtonDefaults.elevation(10.dp)
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween, // Align buttons with space between them
+                            verticalAlignment = Alignment.CenterVertically // Vertically center the buttons
                         ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Add Habit",
-                                modifier = Modifier.size(40.dp),
-                                tint = Color.White
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
-                    }
-                    // Stats button (Right)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-
-                    ) {
-                        IconButton(onClick = { /* TODO: Navigation Stats */ }) {
-                            Icon(
-                                Icons.Filled.Info,
-                                contentDescription = "Stats",
-                                tint = Color(0xFF00897B),
+                            Button(
+                                onClick = {
+                                    selectedHabits.clear()
+                                    navController.navigate("home/false") // Just an example, adjust as needed
+                                },
                                 modifier = Modifier
-                                    .size(50.dp)
-                                    .padding(top = 4.dp)
-                            )
-                        }
-                        Text("Stats", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-                if (isDeleting == "true") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween, // Align buttons with space between them
-                        verticalAlignment = Alignment.CenterVertically // Vertically center the buttons
-                    ) {
-                        Button(
-                            onClick = {
-                                selectedHabits.clear()
-                                navController.navigate("home/false") // Just an example, adjust as needed
-                            },
-                            modifier = Modifier
-                                .height(50.dp)
-                                .width(100.dp)
-                                .padding(start = 8.dp), // Adds space between the buttons
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray) // You can style it differently if needed
-                        ) {
-                            Text("Cancel")
-                        }
-                        Button(
-                            onClick = {
-                                if (selectedHabits.size > 0) {
-                                    onDeleteSelectedHabits()
-                                    navController.navigate("home/false")
-                                }
-                                else {}
-                            },
-                            modifier = Modifier
-                                //.padding(start = 8.dp)
-                                .height(50.dp)
-                                .width(200.dp)
-                                .padding(start = 8.dp), // Adds space between the buttons
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)) // Make the button red
-                        ) {
-                            Text("Delete Selected Habits")
-                        }
+                                    .height(50.dp)
+                                    .width(100.dp)
+                                    .padding(start = 8.dp), // Adds space between the buttons
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray) // You can style it differently if needed
+                            ) {
+                                Text("Cancel")
+                            }
+                            Button(
+                                    onClick = {
+                                        if (selectedHabits.size > 0) {
+                                            onDeleteSelectedHabits()
+                                            navController.navigate("home/false")
+                                        }
+                                        else {}
+                                    },
+                                    modifier = Modifier
+                                        //.padding(start = 8.dp)
+                                        .height(50.dp)
+                                        .width(200.dp)
+                                        .padding(start = 8.dp), // Adds space between the buttons
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)) // Make the button red
+                            ) {
+                                Text("Delete Selected Habits")
+                            }
 
+                        }
                     }
-                }
             }
         }
     }
-}
-
-
-// Function to load habits from SharedPreferences
-fun loadHabits(sharedPreferences: SharedPreferences): List<String> {
-    val jsonString = sharedPreferences.getString("habits", "[]") ?: "[]"
-    val jsonArray = JSONArray(jsonString)
-
-    return List(jsonArray.length()) {
-        val habit = jsonArray.getString(it)
-        if (habit.split(":").size < 3) {
-            println("Invalid habit skipped: $habit") // Debugging
-            ""
-        } else {
-            habit
-        }
-    }.filter { it.isNotEmpty() } // Remove invalid habits
-}
-
-// Function to save habits to SharedPreferences
-fun saveHabits(sharedPreferences: SharedPreferences, habits: List<String>) {
-    val editor = sharedPreferences.edit()
-    editor.putString("habits", JSONArray(habits).toString())
-    editor.apply()
 }
 
 fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
@@ -306,7 +333,7 @@ fun calculateSizePercentage(list1: List<Any>, list2: List<Any>): Int {
 }
 
 
-///// Adding new helper funcitons:
+///// Adding new helper functions:
 fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
     // Find the minimum size to avoid IndexOutOfBoundsException
     val minSize = minOf(list1.size, list2.size)
@@ -374,7 +401,7 @@ fun convertToDates(entries: List<Entry>, startDate: String): List<String> {
 
     // Convert each entry's x (which represents the number of days offset from startDate) to a date
     val calendar = Calendar.getInstance()
-    calendar.time = baseDate
+    calendar.time = baseDate ?: Date() /* Use default date if null */
 
     return entries.map { entry ->
         // Add the x value (days) to the calendar
@@ -588,3 +615,4 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
         }
     }
 }
+

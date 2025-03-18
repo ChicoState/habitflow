@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services") // Firebase Plugin
 }
 
 android {
@@ -41,7 +42,6 @@ android {
 
 dependencies {
 
-    implementation(libs.mpandroidchart)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -53,6 +53,26 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.runtime.android)
     implementation(libs.androidx.navigation.runtime.ktx)
+    implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+    // Firebase BOM (Bill of Materials) - manages Firebase versions
+    implementation(platform("com.google.firebase:firebase-bom:32.7.2"))  // Update to latest
+    // Firebase Analytics (Required for Firebase to work) and Authentication (For login, optional but useful)
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    // Firebase Firestore (For user habits storage)
+    implementation("com.google.firebase:firebase-firestore")
+    // Firebase Realtime Database (Optional if using Firestore)
+    implementation("com.google.firebase:firebase-database")
+    // Firebase Cloud Storage (For storing habit-related images, optional)
+    implementation("com.google.firebase:firebase-storage")
+    implementation("androidx.compose.material3:material3:1.2.0")
+    implementation("androidx.compose.ui:ui-text:1.5.0")
+    implementation("androidx.compose.ui:ui:1.5.0")
+    implementation("androidx.compose.ui:ui-text:1.5.0")
+    implementation("androidx.compose.foundation:foundation:1.5.0") // Required for text input
+    implementation("androidx.compose.runtime:runtime:1.5.0")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
+    implementation(libs.androidx.media3.common.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -62,3 +82,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
+apply(plugin = "com.google.gms.google-services")

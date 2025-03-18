@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 ///// new import
 import androidx.compose.foundation.lazy.items
-
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 
 @Composable
@@ -107,12 +107,12 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
 
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                     )
                 }
                 Text(
-                    text = "${parts[0]}",
+                    text = parts[0],
                     style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.align(Alignment.Center)
 
