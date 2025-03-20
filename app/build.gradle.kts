@@ -55,7 +55,7 @@ dependencies {
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
     // Firebase BOM (Bill of Materials) - manages Firebase versions
-    implementation(platform("com.google.firebase:firebase-bom:32.7.2"))  // Update to latest
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))  // Update to latest
     // Firebase Analytics (Required for Firebase to work) and Authentication (For login, optional but useful)
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
@@ -73,6 +73,7 @@ dependencies {
     implementation("androidx.compose.runtime:runtime:1.5.0")
     implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
     implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.firebase.auth.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

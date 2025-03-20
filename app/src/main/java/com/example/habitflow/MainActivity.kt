@@ -61,11 +61,11 @@ class MainActivity : ComponentActivity() {
                             val isDeletingArg = backStackEntry.arguments?.getString("isDeleting") ?: "false"
                             HomeScreen(navController = navController, goodHabit = "", isDeleting = isDeletingArg)
                         }
-                        composable("addHabit") { AddHabitScreen(navController = navController) }
+                        composable("addHabit") { AddHabitScreen(navController = navController, sharedPreferences = sharedPreferences) }
                         composable("progress/{habit}/{span}") { backStackEntry ->
                             val habit = backStackEntry.arguments?.getString("habit") ?: ""
                             val span = backStackEntry.arguments?.getString("span") ?: ""
-                            ProgressScreen(navController = navController, habit = habit, span = span)
+                            ProgressScreen(navController = navController, habit = habit, span = span, sharedPreferences = sharedPreferences)
                         }
                         composable("settings") {
                             SettingsScreen(navController, isDarkMode, sharedPreferences) // ✅ Pass darkMode state and SharedPreferences

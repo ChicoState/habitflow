@@ -11,6 +11,7 @@ composeBom = "2024.04.01"
 navigationRuntimeAndroid = "2.9.0-alpha07"
 navigationRuntimeKtx = "2.8.8"
 media3CommonKtx = "1.5.1"
+firebaseAuthKtx = "23.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -32,6 +33,7 @@ androidx-navigation-runtime-android = { group = "androidx.navigation", name = "n
 mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version = "v3.1.0" }
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
 androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
+firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx", version.ref = "firebaseAuthKtx" }
 
 
 [plugins]
