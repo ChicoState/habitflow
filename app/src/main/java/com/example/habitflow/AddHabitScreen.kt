@@ -19,10 +19,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import android.content.SharedPreferences
 
 
 @Composable
-fun AddHabitScreen(navController: NavController) {
+fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPreferences) {
     var habitName by remember { mutableStateOf("") }
     var habitDescription by remember { mutableStateOf("") }  // New description field
     var isGoodHabit by remember { mutableStateOf(true) }
@@ -30,6 +31,11 @@ fun AddHabitScreen(navController: NavController) {
     var showDescErrorDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var isBadHabit by remember { mutableStateOf(false) }
+
+    // ✅ Get the current Dark Mode value from SharedPreferences
+    var darkMode by remember {
+        mutableStateOf(sharedPreferences.getBoolean("dark_mode", false))
+    }
 
     Column(modifier = Modifier.fillMaxSize()
     ) {
@@ -44,10 +50,6 @@ fun AddHabitScreen(navController: NavController) {
                 onClick = { navController.navigate("home/") }, // Navigate to "home/"
                 modifier = Modifier
                     .size(40.dp) // Increase the size of the icon button for the bubble effect
-                    .background(
-                        color = Color(0xFFE0E0E0), // Correct Color usage
-                        shape = CircleShape // Make the background circular
-                    )
                     .padding(5.dp)
                     .align(Alignment.TopStart)
 
@@ -55,6 +57,7 @@ fun AddHabitScreen(navController: NavController) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
+                    tint = if(darkMode) Color.White else Color.Black
                 )
             }
             Text(

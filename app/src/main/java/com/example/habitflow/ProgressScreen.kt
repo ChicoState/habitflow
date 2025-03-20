@@ -32,10 +32,16 @@ import androidx.compose.ui.unit.sp
 ///// new import
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import android.content.SharedPreferences
 
 
 @Composable
-fun ProgressScreen(navController: NavController, habit: String, span: String) {
+fun ProgressScreen(
+    navController: NavController,
+    habit: String,
+    span: String,
+    sharedPreferences: SharedPreferences
+) {
     // Dummy data for cigarettes smoked each day (replace with actual data logic)
     val parts = habit.split(":")
     val userDataList = if (parts[2] == "good" )
@@ -53,6 +59,10 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
         else if (span == "Monthly") { comparisonDataList[1] }
         else { comparisonDataList[2] }
 
+    // ✅ Get the current Dark Mode value from SharedPreferences
+    var darkMode by remember {
+        mutableStateOf(sharedPreferences.getBoolean("dark_mode", false))
+    }
 
     ////// Adding in variables for calculating streak, progress, and overacheiver data, and dates
 
@@ -98,10 +108,6 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                     onClick = { navController.navigate("home/") }, // Navigate to "home/"
                     modifier = Modifier
                         .size(40.dp) // Increase the size of the icon button for the bubble effect
-                        .background(
-                            color = Color(0xFFE0E0E0), // Correct Color usage
-                            shape = CircleShape // Make the background circular
-                        )
                         .padding(5.dp)
                         .align(Alignment.TopStart)
 
@@ -109,6 +115,7 @@ fun ProgressScreen(navController: NavController, habit: String, span: String) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
+                        tint = if(darkMode) Color.White else Color.Black
                     )
                 }
                 Text(
