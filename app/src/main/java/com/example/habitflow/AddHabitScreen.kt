@@ -4,6 +4,7 @@
 package com.example.habitflow
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,8 +18,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import android.content.SharedPreferences
 
 
@@ -31,6 +35,17 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
     var showDescErrorDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var isBadHabit by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+    var duration by remember { mutableStateOf("") }
+    var frequency by remember { mutableStateOf("") }
+    var reminders by remember { mutableStateOf(false) }
+    var texts by remember { mutableStateOf(false) }
+    var hourly by remember { mutableStateOf(false) }
+    var daily by remember { mutableStateOf(false) }
+    var weekly by remember { mutableStateOf(false) }
+    var custom by remember { mutableStateOf(false) }
+
+
 
     // ✅ Get the current Dark Mode value from SharedPreferences
     var darkMode by remember {
@@ -82,7 +97,13 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 10.dp)
         )
 
-        Row(modifier = Modifier.padding(vertical = 8.dp).padding(horizontal = 16.dp)) {
+        Row(
+            modifier = Modifier
+                .padding(vertical = 8.dp).
+                padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+            horizontalArrangement = Arrangement.Start
+        ) {
             Checkbox(
                 checked = isGoodHabit,
                 onCheckedChange = {
@@ -92,6 +113,7 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                 }
             )
             Text("Good Habit")
+            Spacer(modifier = Modifier.width(12.dp))
             Checkbox(
                 checked = isBadHabit,
                 onCheckedChange = {
@@ -101,9 +123,139 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                 }
             )
             Text("Bad Habit")
-
         }
-
+        Row(
+            modifier = Modifier
+                .padding(vertical = 8.dp).
+                padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Text("Duration:")
+            OutlinedTextField(
+                value = duration,
+                onValueChange = { duration = it },
+                label = { Text("1-1000") },
+                modifier = Modifier
+                    .width(150.dp)
+                    .wrapContentHeight()
+                    .padding(horizontal = 16.dp)
+            )
+            Text("Days")
+        }
+        Row(
+            modifier = Modifier
+                .padding(vertical = 8.dp).
+                padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Text("Frequency:    Every")
+            OutlinedTextField(
+                value = frequency,
+                onValueChange = { frequency = it },
+                label = { Text("1-30") },
+                modifier = Modifier
+                    .width(150.dp)
+                    .wrapContentHeight()
+                    .padding(horizontal = 16.dp)
+            )
+            Text("Days")
+        }
+        Row(
+            modifier = Modifier
+                .padding(vertical = 8.dp).
+                padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Checkbox(
+                checked = reminders,
+                onCheckedChange = {
+                    // When "Bad Habit" is checked, uncheck "Good Habit"
+                    reminders = it
+                }
+            )
+            Text("Reminders")
+        }
+        if (reminders) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(vertical = 1.dp),
+                verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Checkbox(
+                    checked = hourly,
+                    onCheckedChange = {
+                        // When "Bad Habit" is checked, uncheck "Good Habit"
+                        hourly = it
+                        daily = false
+                        weekly = false
+                        custom = false
+                    }
+                )
+                Text("Hourly")
+            }
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(vertical = 1.dp),
+                verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Checkbox(
+                    checked = daily,
+                    onCheckedChange = {
+                        // When "Bad Habit" is checked, uncheck "Good Habit"
+                        daily = it
+                        hourly = false
+                        weekly = false
+                        custom = false
+                    }
+                )
+                Text("Daily")
+            }
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(vertical = 1.dp),
+                verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Checkbox(
+                    checked = weekly,
+                    onCheckedChange = {
+                        // When "Bad Habit" is checked, uncheck "Good Habit"
+                        weekly = it
+                        hourly = false
+                        daily = false
+                        custom = false
+                    }
+                )
+                Text("Weekly")
+            }
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(vertical = 1.dp),
+                verticalAlignment = Alignment.CenterVertically, // Align the text and checkbox vertically centered
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Checkbox(
+                    checked = custom,
+                    onCheckedChange = {
+                        // When "Bad Habit" is checked, uncheck "Good Habit"
+                        custom = it
+                        hourly = false
+                        daily = false
+                        weekly = false
+                    }
+                )
+                Text("Custom")
+            }
+        }
         Button(
             onClick = {
                 if (habitName.isBlank()) {
@@ -133,7 +285,10 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                     }
                 }
             },
-            modifier = Modifier.padding(top = 16.dp).padding(horizontal = 16.dp)
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .padding(horizontal = 16.dp)
+                .align(Alignment.CenterHorizontally)
         ) {
             Text("Save Habit")
         }
@@ -211,4 +366,9 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
             }
         }
     }
+}
+
+@Composable
+fun CircularCheckbox(checked: Boolean, onCheckedChange: () -> Unit) {
+
 }
