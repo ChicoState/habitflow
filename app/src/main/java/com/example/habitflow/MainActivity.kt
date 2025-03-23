@@ -159,6 +159,33 @@ fun moveToPastHabits(user: FirebaseUser, selectedHabits: Set<String>, db: Fireba
     }
 }
 
+fun deleteHabitsFromFirestore(user: FirebaseUser, selectedHabits: Set<String>, db: FirebaseFirestore, onComplete: () -> Unit) {
+    val userRef = db.collection("users").document(user.uid)
+
+    // Start a batch to perform both the deletion operations atomically
+    val batch = db.batch()
+
+    selectedHabits.forEach { habitId ->
+        // Remove habit from the user's habits array
+        batch.update(userRef, "habits", FieldValue.arrayRemove(habitId))
+
+        // Also, delete the corresponding habit document from the "habits" collection
+        val habitRef = db.collection("habits").document(habitId)
+        batch.delete(habitRef)
+    }
+
+    // Commit the batch operation
+    batch.commit().addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            Log.d("deleteHabits", "Successfully deleted habits and documents")
+            onComplete()  // Reload the habits after successful deletion
+        } else {
+            Log.e("deleteHabits", "Error deleting habits and documents", task.exception)
+        }
+    }
+}
+
+
 
 
 

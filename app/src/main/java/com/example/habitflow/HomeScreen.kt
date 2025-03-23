@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -116,7 +118,11 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
 
             if (isDeleting == "true") {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Select habit(s) to remove:", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = "Select Habits to Move:",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(habits.filter { habit -> !selectedHabits.contains(habit) }, key = { it }) { habit ->
@@ -167,8 +173,8 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
 
                                     }) {
                                     Icon(
-                                        Icons.Filled.Delete,
-                                        contentDescription = "Delete",
+                                        Icons.Filled.Edit,
+                                        contentDescription = "Edit",
                                         tint = Color(0xFF00897B), // Teal
                                         modifier = Modifier
                                             .size(50.dp)
@@ -177,7 +183,7 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                                 }
                             }
                             Text(
-                                "Delete",
+                                "Edit",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -226,7 +232,7 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -238,12 +244,17 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                                 },
                                 modifier = Modifier
                                     .height(50.dp)
-                                    .width(100.dp)
-                                    .padding(start = 8.dp),
+                                    .width(90.dp)
+                                    .padding(start = 4.dp),
                                 shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                                contentPadding = PaddingValues(4.dp)
                             ) {
-                                Text("Cancel")
+                                Text(
+                                    text = "Cancel",
+                                    fontSize = 12.sp, // Adjust the font size to your desired smaller size
+                                    color = Color.White // Set the text color to white
+                                )
                             }
 
                             Button(
@@ -265,12 +276,48 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                                 },
                                 modifier = Modifier
                                     .height(50.dp)
-                                    .width(200.dp)
-                                    .padding(start = 8.dp),
+                                    .width(130.dp)
+                                    .padding(start = 4.dp),
                                 shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)) // Red button color
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C3E50)), // Red button color
+                                contentPadding = PaddingValues(4.dp),
+                                ) {
+                                Text(
+                                    text = "Save for Later",
+                                    fontSize = 12.sp, // Adjust the font size to your desired smaller size
+                                    color = Color.White // Set the text color to white
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    if (selectedHabits.isNotEmpty()) {
+                                        Log.d("deleteHabit", "Deleteing selceted habits")
+                                        deleteHabitsFromFirestore(user!!, selectedHabits, db) {
+                                            Log.d("deleteHabit", "Deleted successfully, reloading habits")
+                                            // After moving the habits, reload the habits list from Firestore
+                                            loadHabitsFromFirestore(user) { fetchedHabits ->
+                                                habits = fetchedHabits
+                                            }
+                                            selectedHabits.clear()  // Clear selected habits after moving
+                                            navController.navigate("home/false")  // Optionally navigate back to normal view
+                                        }
+                                    } else {
+                                        Log.d("deleteHabit", "No habits selected")
+                                    }
+                                },
+                                modifier = Modifier
+                                    .height(50.dp)
+                                    .width(120.dp)
+                                    .padding(start = 4.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)), // Red button color
+                                contentPadding = PaddingValues(4.dp)
                             ) {
-                                Text("Move to Past Habits")
+                                Text(
+                                    text = "Delete Habits",
+                                    fontSize = 12.sp, // Adjust the font size to your desired smaller size
+                                    color = Color.White // Set the text color to white
+                                )
                             }
                         }
                     }
