@@ -3,6 +3,7 @@ package com.example.habitflow
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +19,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 
@@ -78,7 +81,7 @@ class MainActivity : ComponentActivity() {
 }
 
 // ✅ Firebase Firestore Functions
-data class Habit(val name: String, val description: String, val type: String)
+//data class Habit(val name: String, val description: String, val type: String)
 
 fun saveHabitsToFirestore(user: FirebaseUser, newHabits: List<String>) {
     val db = FirebaseFirestore.getInstance()
@@ -113,3 +116,49 @@ fun loadHabitsFromFirestore(user: FirebaseUser, onSuccess: (List<String>) -> Uni
             onSuccess(emptyList())
         }
 }
+
+fun getHabitFromFirestore(habitId: String, onComplete: (Habit?) -> Unit) {
+    val db = Firebase.firestore
+    val habitRef = db.collection("habits").document(habitId)
+
+    habitRef.get().addOnSuccessListener { document ->
+        if (document.exists()) {
+            val habit = document.toObject(Habit::class.java) // Assuming you have a Habit data class
+            onComplete(habit)
+        } else {
+            onComplete(null)
+        }
+    }.addOnFailureListener { exception ->
+        println("Error getting habit: $exception")
+        onComplete(null)
+    }
+}
+
+fun moveToPastHabits(user: FirebaseUser, selectedHabits: Set<String>, db: FirebaseFirestore, onComplete: () -> Unit) {
+    val userRef = db.collection("users").document(user.uid)
+
+    // Start a batch to perform both the array updates atomically
+    val batch = db.batch()
+
+    selectedHabits.forEach { habitId ->
+        // Update the user's document by moving the habit to pastHabits and removing it from habits
+        batch.update(userRef,
+            "habits", FieldValue.arrayRemove(habitId),  // Remove habit from habits array
+            "pastHabits", FieldValue.arrayUnion(habitId)  // Add habit to pastHabits array
+        )
+    }
+
+    // Commit the batch operation
+    batch.commit().addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            Log.d("moveToPast", "Successfully moved to past habits")
+            onComplete()  // Reload the habits after successful move
+        } else {
+            Log.e("moveToPast", "Error moving to past habits", task.exception)
+        }
+    }
+}
+
+
+
+

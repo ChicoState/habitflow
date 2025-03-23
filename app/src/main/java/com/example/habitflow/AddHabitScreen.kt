@@ -24,6 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import android.content.SharedPreferences
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.google.firebase.firestore.FieldValue
 
 
 @Composable
@@ -36,8 +39,8 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
     val context = LocalContext.current
     var isBadHabit by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
-    var duration by remember { mutableStateOf("") }
-    var frequency by remember { mutableStateOf("") }
+    var duration by remember { mutableStateOf(0) }
+    var frequency by remember { mutableStateOf(0) }
     var reminders by remember { mutableStateOf(false) }
     var texts by remember { mutableStateOf(false) }
     var hourly by remember { mutableStateOf(false) }
@@ -133,9 +136,17 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
         ) {
             Text("Duration:")
             OutlinedTextField(
-                value = duration,
-                onValueChange = { duration = it },
+                value = duration.toString(),
+                onValueChange = { newValue ->
+                    newValue.toIntOrNull()?.let {
+                        if (it in 1..1000) {
+                            duration = it
+                        }
+                    } },
                 label = { Text("1-1000") },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number // Set keyboard type to number
+                ),
                 modifier = Modifier
                     .width(150.dp)
                     .wrapContentHeight()
@@ -152,9 +163,17 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
         ) {
             Text("Frequency:    Every")
             OutlinedTextField(
-                value = frequency,
-                onValueChange = { frequency = it },
-                label = { Text("1-30") },
+                value = frequency.toString(),
+                onValueChange = { newValue ->
+                    newValue.toIntOrNull()?.let {
+                        if (it in 1..1000) {
+                            frequency = it
+                        }
+                    } },
+                label = { Text("1-1000") },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number // Set keyboard type to number
+                ),
                 modifier = Modifier
                     .width(150.dp)
                     .wrapContentHeight()
@@ -262,8 +281,40 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                     showNameErrorDialog = true
                     return@Button
                 }
-
                 val user = FirebaseAuth.getInstance().currentUser
+                if (user != null) {
+                    val db = FirebaseFirestore.getInstance()
+                    //val userDoc = db.collection("users").document(user.uid)
+                    val habitData = hashMapOf(
+                        "name" to habitName,
+                        "description" to habitDescription,
+                        "type" to if (isGoodHabit) "good" else "bad",
+                        "duration" to duration, // Convert to integer or default to 0
+                        "frequency" to frequency, // Convert to integer or default to 0
+                    )
+
+                    // Step 1: Create the habit in the 'habits' collection
+                    db.collection("habits")
+                        .add(habitData)
+                        .addOnSuccessListener { documentReference ->
+                            println("Habit created successfully. Document ID: ${documentReference.id}")
+                            // Step 2: Add the habit ID to the current user's document
+                            val userDoc = db.collection("users").document(user.uid)
+                            userDoc.update("habits", FieldValue.arrayUnion(documentReference.id))
+                                .addOnSuccessListener {
+                                    // Navigate back to home screen
+                                    navController.navigate("home/")
+                                }
+                                .addOnFailureListener { e ->
+                                    println("Error updating habits: ${e.message}")
+                                }
+                        }
+                        .addOnFailureListener { e ->
+                            println("Error creating habit: ${e.message}")
+                        }
+                    }
+                },
+                /*val user = FirebaseAuth.getInstance().currentUser
                 if (user != null) {
                     val db = FirebaseFirestore.getInstance()
                     val userDoc = db.collection("users").document(user.uid)
@@ -284,7 +335,7 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                             }
                     }
                 }
-            },
+            },*/
             modifier = Modifier
                 .padding(top = 16.dp)
                 .padding(horizontal = 16.dp)
