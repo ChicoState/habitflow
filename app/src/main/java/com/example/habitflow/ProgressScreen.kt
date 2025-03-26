@@ -38,18 +38,33 @@ import android.content.SharedPreferences
 @Composable
 fun ProgressScreen(
     navController: NavController,
-    habit: String,
+    habitId: String,
     span: String,
     sharedPreferences: SharedPreferences
 ) {
     // Dummy data for cigarettes smoked each day (replace with actual data logic)
-    val parts = habit.split(":")
-    val userDataList = if (parts[2] == "good" )
+    val parts = habitId.split(":")
+    var habit by remember { mutableStateOf<Habit?>(null) }
+    var habitName: String = ""
+    var habitType: String = ""
+
+    LaunchedEffect(habitId) {
+        getHabitFromFirestore(habitId) { fetchedHabit ->
+            habit = fetchedHabit // Store the fetched habit in the state
+        }
+    }
+    habit?.let { habitNonNull ->
+        habitName = habitNonNull.name
+        habitType = habitNonNull.type
+    }
+
+    val userDataList = if (habitType== "good" )
     { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
     else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
-    val comparisonDataList = if (parts[2] == "good" )
+    val comparisonDataList = if (habitType == "good" )
     { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
     else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
+
     val userData =
         if (span == "Weekly") { userDataList[0] }
         else if (span == "Monthly") { userDataList[1] }
@@ -69,12 +84,12 @@ fun ProgressScreen(
 
     val progress = ((userDataList[2][userDataList[2].size-1].x) / comparisonDataList[2].size * 100) //.toFloat()
     val streak =
-        if (parts[2] == "good")
+        if (habitType == "good")
         { (countMatchingFromEndGood(userDataList[2], comparisonDataList[2])) }
         else { (countMatchingFromEndBad(userDataList[2], comparisonDataList[2])) }
 
     val larger =
-        if (parts[2] == "good" )
+        if (habitType == "good" )
         { countDaysWithLargerY(userDataList[2], comparisonDataList[2]) }
         else { countDaysWithSmallerY(userDataList[2], comparisonDataList[2]) }
     val goalMet = compareLists(userData, comparisonData)
@@ -119,7 +134,7 @@ fun ProgressScreen(
                     )
                 }
                 Text(
-                    text = parts[0],
+                    text = habitName,
                     style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.align(Alignment.Center)
 
@@ -284,7 +299,7 @@ fun ProgressScreen(
             ) {
                 // Button 1
                 Button(
-                    onClick = { navController.navigate("progress/${habit}/Weekly") },
+                    onClick = { navController.navigate("progress/${habitId}/Weekly") },
                     modifier = Modifier.width(85.dp).height(48.dp),
                     shape = RoundedCornerShape(5.dp),
                     contentPadding = PaddingValues(0.dp) // Removes the internal padding
@@ -297,7 +312,7 @@ fun ProgressScreen(
 
                 // Button 2
                 Button(
-                    onClick = { navController.navigate("progress/${habit}/Monthly") },
+                    onClick = { navController.navigate("progress/${habitId}/Monthly") },
                     modifier = Modifier.width(85.dp).height(48.dp),
                     shape = RoundedCornerShape(5.dp),
                     contentPadding = PaddingValues(0.dp) // Removes the internal padding
@@ -308,7 +323,7 @@ fun ProgressScreen(
 
                 // Button 3
                 Button(
-                    onClick = { navController.navigate("progress/${habit}/Overall") },
+                    onClick = { navController.navigate("progress/${habitId}/Overall") },
                     modifier = Modifier.width(85.dp).height(48.dp),
                     shape = RoundedCornerShape(5.dp),
                     contentPadding = PaddingValues(0.dp) // Removes the internal padding
@@ -333,7 +348,7 @@ fun ProgressScreen(
                     .padding(8.dp)
             ) {
                 Column(horizontalAlignment = Alignment.Start) {
-                    LineChartView(dataSets = listOf(userData, comparisonData), habit)
+                    LineChartView(dataSets = listOf(userData, comparisonData))
                 }
             }
 
@@ -399,8 +414,8 @@ fun ProgressScreen(
 }
 
 @Composable
-fun LineChartView(dataSets: List<List<Entry>>, habit: String) {
-    val parts = habit.split(":")
+fun LineChartView(dataSets: List<List<Entry>>) {
+    //val parts = habit.split(":")
     val lineDataSets = mutableListOf<LineDataSet>()
     dataSets.mapIndexed { index, data ->
         val label = when (index) {

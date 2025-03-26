@@ -1,10 +1,12 @@
 package com.example.habitflow
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -64,6 +67,7 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
     var habits by remember { mutableStateOf<List<String>>(emptyList()) }
     val user = Firebase.auth.currentUser
     val db = Firebase.firestore
+    var isLoading by remember { mutableStateOf(false) } // Loading state
 
     LaunchedEffect(user) {
         if (user != null) {
@@ -73,31 +77,6 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
         }
     }
     val selectedHabits by remember { mutableStateOf(mutableSetOf<String>()) }
-    val onDeleteSelectedHabits: () -> Unit = {
-        val user = Firebase.auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            val userDoc = db.collection("users").document(user.uid)
-
-            userDoc.get().addOnSuccessListener { document ->
-                val currentHabits = (document.get("habits") as? List<*>)?.filterIsInstance<String>()?.toMutableList() ?: mutableListOf()
-
-                selectedHabits.forEach { habit ->
-                    currentHabits.remove(habit) // Remove habit locally
-                }
-
-                userDoc.update("habits", currentHabits) // Update Firestore
-                    .addOnSuccessListener {
-                        println("Selected habits deleted successfully.")
-                        selectedHabits.clear()
-                        habits = currentHabits // ✅ Immediately update the UI state
-                    }
-                    .addOnFailureListener { e ->
-                        println("Error deleting habits: $e")
-                    }
-            }
-        }
-    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -136,14 +115,19 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
+
             if (isDeleting == "true") {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Select habit(s) to remove:", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = "Select Habits to Move:",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(habits.filter { habit -> !selectedHabits.contains(habit) }, key = { it }) { habit ->
                     HabitItem(
-                        habit = habit,
+                        habitId = habit,
                         navController = navController,
                         goodHabit = goodHabit,
                         isDeleting = isDeleting,
@@ -185,16 +169,12 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                             Box(contentAlignment = Alignment.Center) {
                                 IconButton(
                                     onClick = {
-                                        if (isDeleting == "true") {
-                                            navController.navigate("home/false")
-                                        } else {
-                                            navController.navigate("home/true")
-                                        }
+                                        navController.navigate("home/true")
 
                                     }) {
                                     Icon(
-                                        Icons.Filled.Delete,
-                                        contentDescription = "Delete",
+                                        Icons.Filled.Edit,
+                                        contentDescription = "Edit",
                                         tint = Color(0xFF00897B), // Teal
                                         modifier = Modifier
                                             .size(50.dp)
@@ -203,7 +183,7 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                                 }
                             }
                             Text(
-                                "Delete",
+                                "Edit",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -252,46 +232,96 @@ fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting:
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween, // Align buttons with space between them
-                            verticalAlignment = Alignment.CenterVertically // Vertically center the buttons
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Cancel Button
                             Button(
                                 onClick = {
-                                    selectedHabits.clear()
-                                    navController.navigate("home/false") // Just an example, adjust as needed
+                                    selectedHabits.clear()  // Clear selected habits
+                                    navController.navigate("home/false")
                                 },
                                 modifier = Modifier
                                     .height(50.dp)
-                                    .width(100.dp)
-                                    .padding(start = 8.dp), // Adds space between the buttons
+                                    .width(90.dp)
+                                    .padding(start = 4.dp),
                                 shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray) // You can style it differently if needed
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                                contentPadding = PaddingValues(4.dp)
                             ) {
-                                Text("Cancel")
-                            }
-                            Button(
-                                    onClick = {
-                                        if (selectedHabits.size > 0) {
-                                            onDeleteSelectedHabits()
-                                            navController.navigate("home/false")
-                                        }
-                                        else {}
-                                    },
-                                    modifier = Modifier
-                                        //.padding(start = 8.dp)
-                                        .height(50.dp)
-                                        .width(200.dp)
-                                        .padding(start = 8.dp), // Adds space between the buttons
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)) // Make the button red
-                            ) {
-                                Text("Delete Selected Habits")
+                                Text(
+                                    text = "Cancel",
+                                    fontSize = 12.sp, // Adjust the font size to your desired smaller size
+                                    color = Color.White // Set the text color to white
+                                )
                             }
 
+                            Button(
+                                onClick = {
+                                    if (selectedHabits.isNotEmpty()) {
+                                        Log.d("moveToPast", "Moving selected habits to past")
+                                        moveToPastHabits(user!!, selectedHabits, db) {
+                                            Log.d("moveToPast", "Move to past successful, reloading habits")
+                                            // After moving the habits, reload the habits list from Firestore
+                                            loadHabitsFromFirestore(user) { fetchedHabits ->
+                                                habits = fetchedHabits
+                                            }
+                                            selectedHabits.clear()  // Clear selected habits after moving
+                                            navController.navigate("home/false")  // Optionally navigate back to normal view
+                                        }
+                                    } else {
+                                        Log.d("moveToPast", "No habits selected")
+                                    }
+                                },
+                                modifier = Modifier
+                                    .height(50.dp)
+                                    .width(130.dp)
+                                    .padding(start = 4.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C3E50)), // Red button color
+                                contentPadding = PaddingValues(4.dp),
+                                ) {
+                                Text(
+                                    text = "Save for Later",
+                                    fontSize = 12.sp, // Adjust the font size to your desired smaller size
+                                    color = Color.White // Set the text color to white
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    if (selectedHabits.isNotEmpty()) {
+                                        Log.d("deleteHabit", "Deleteing selceted habits")
+                                        deleteHabitsFromFirestore(user!!, selectedHabits, db) {
+                                            Log.d("deleteHabit", "Deleted successfully, reloading habits")
+                                            // After moving the habits, reload the habits list from Firestore
+                                            loadHabitsFromFirestore(user) { fetchedHabits ->
+                                                habits = fetchedHabits
+                                            }
+                                            selectedHabits.clear()  // Clear selected habits after moving
+                                            navController.navigate("home/false")  // Optionally navigate back to normal view
+                                        }
+                                    } else {
+                                        Log.d("deleteHabit", "No habits selected")
+                                    }
+                                },
+                                modifier = Modifier
+                                    .height(50.dp)
+                                    .width(120.dp)
+                                    .padding(start = 4.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)), // Red button color
+                                contentPadding = PaddingValues(4.dp)
+                            ) {
+                                Text(
+                                    text = "Delete Habits",
+                                    fontSize = 12.sp, // Adjust the font size to your desired smaller size
+                                    color = Color.White // Set the text color to white
+                                )
+                            }
                         }
                     }
-            }
+                }
         }
     }
 }
@@ -435,14 +465,23 @@ fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
 ///////
 
 @Composable
-fun HabitItem(habit: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
-    val parts = habit.split(":")
-    val habitName = parts.getOrNull(0) ?: "Unknown Habit"
-    val habitDescription = parts.getOrNull(1) ?: ""
-    val habitType = parts.getOrNull(2) ?: "unknown"
+fun HabitItem(habitId: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
+    var habitName: String = ""
+    var habitDescription: String = ""
+    var habitType: String = ""
+    var habit by remember { mutableStateOf<Habit?>(null) }
+    var backgroundColor: Color = Color.Transparent
 
-    val backgroundColor: Color = if (habitType == "good") Color(0x40A5D6A7) else {
-        Color(0x40FF8A80)
+    LaunchedEffect(habitId) {
+        getHabitFromFirestore(habitId) { fetchedHabit ->
+            habit = fetchedHabit // Store the fetched habit in the state
+        }
+    }
+    habit?.let { habitNonNull ->
+        habitName = habitNonNull.name
+        habitDescription = habitNonNull.description
+        habitType = habitNonNull.type
+        backgroundColor = habitNonNull.backgroundColor
     }
 
     val userData = if (habitType == "good")
@@ -484,7 +523,6 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
             }
         }
     }
-
     val isPressed = remember { mutableStateOf(isSelected) }
     val pressedBackgroundColor = if (isDeleting == "true" && isPressed.value) {
         backgroundColor.copy(
@@ -496,7 +534,6 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
     } else {
         backgroundColor.copy(alpha = 0.4f)  // Normal color when not pressed
     }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -506,7 +543,7 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
                 onClick = {
                     isPressed.value = !isPressed.value
                     if (isDeleting != "true") {
-                        navController.navigate("progress/${habit}/Overall")
+                        navController.navigate("progress/${habitId}/Overall")
                     }
                     else {
                         onSelect(isPressed.value) // Update selected habits list
@@ -533,28 +570,22 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
             ) {
                 Column(modifier = Modifier.weight(0.4f)) {
                     Text(
-                        text = parts[0],
+                        text = habitName,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    ) // Habit Name
-                    if (parts.size > 1) {
-                        Text(
-                            text = parts[1],
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
+                    )
+                    Text(
+                        text = habitDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
-
                 Spacer(modifier = Modifier.width(16.dp))
-
-                // Right Column: Streak and Progress
                 Column(modifier = Modifier.weight(0.6f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // First Column for Streak test
                         Column(
                             modifier = Modifier
                                 .weight(.5f)
@@ -579,7 +610,6 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
                                     .width(30.dp)
                             )
                         }
-                        // Second Column for Progress Emoji (Thumbs Up / Thumbs Down)
                         Column(
                             modifier = Modifier
                                 .weight(.5f)
@@ -615,4 +645,3 @@ fun HabitItem(habit: String, navController: NavController, goodHabit: String, is
         }
     }
 }
-
