@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.habitflow"
-        minSdk = 24
+        minSdk = 25
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -74,6 +74,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.firebase.auth.ktx)
+    implementation(libs.androidx.compose.material)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -1,5 +1,6 @@
 package com.example.habitflow
 
+
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,6 +61,25 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import kotlin.math.roundToInt
+
+
+
+
 
 @Composable
 fun HomeScreen(navController: NavController, goodHabit: String = "", isDeleting: String) {
@@ -465,179 +485,210 @@ fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
 ///////
 
 @Composable
-fun HabitItem(habitId: String, navController: NavController, goodHabit: String, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
-    var habitName: String = ""
-    var habitDescription: String = ""
-    var habitType: String = ""
+fun HabitItem(
+    habitId: String,
+    navController: NavController,
+    goodHabit: String,
+    isDeleting: String,
+    isSelected: Boolean,
+    onSelect: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val user = Firebase.auth.currentUser
+    val db = Firebase.firestore
+
+    val swipeOffset = remember { mutableStateOf(0f) }
+    val maxSwipe = 200f
+    val showDeleteIcon = remember { mutableStateOf(false) }
+
+    var isDeleted by remember { mutableStateOf(false) }
+    if (isDeleted) return // Don't show if deleted
+
+    var habitName by remember { mutableStateOf("") }
+    var habitDescription by remember { mutableStateOf("") }
+    var habitType by remember { mutableStateOf("") }
     var habit by remember { mutableStateOf<Habit?>(null) }
-    var backgroundColor: Color = Color.Transparent
+    var backgroundColor by remember { mutableStateOf(Color.Transparent) }
 
     LaunchedEffect(habitId) {
         getHabitFromFirestore(habitId) { fetchedHabit ->
-            habit = fetchedHabit // Store the fetched habit in the state
+            habit = fetchedHabit
         }
     }
-    habit?.let { habitNonNull ->
-        habitName = habitNonNull.name
-        habitDescription = habitNonNull.description
-        habitType = habitNonNull.type
-        backgroundColor = habitNonNull.backgroundColor
+
+    habit?.let {
+        habitName = it.name
+        habitDescription = it.description
+        habitType = it.type
+        backgroundColor = it.backgroundColor
     }
 
-    val userData = if (habitType == "good")
-        listOf(
-            DataLists.goodWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.goodMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.goodOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
-        )
-    else
-        listOf(
-            DataLists.badWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.badMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.badOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
-        )
+    val userData = if (habitType == "good") listOf(
+        DataLists.goodWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.goodMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.goodOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+    ) else listOf(
+        DataLists.badWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.badMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.badOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+    )
 
-    val comparisonData = if (habitType == "good") listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) else listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3)
+    val comparisonData = if (habitType == "good")
+        listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3)
+    else
+        listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3)
+
     val progress = if (userData.size > 2 && userData[2].isNotEmpty() && comparisonData.size > 2) {
         ((userData[2].last().x) / comparisonData[2].size * 100).toInt()
-    } else {
-        0
-    }
+    } else 0
+
     val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
+
     var arrowColor = Color.Red
     var upOrDown = "nan"
     if (isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
-        upOrDown = "↘"
-        arrowColor = Color(0xFF006400)
+        upOrDown = "↘"; arrowColor = Color(0xFF006400)
     } else if (isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
-        upOrDown = "↘"
-        arrowColor = Color.Red
+        upOrDown = "↘"; arrowColor = Color.Red
     } else {
         if (!isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
-            upOrDown = "↗"
-            arrowColor = Color.Red
-        } else {
-            if (!isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
-                upOrDown = "↗"
-                arrowColor = Color(0xFF006400)
-            }
+            upOrDown = "↗"; arrowColor = Color.Red
+        } else if (!isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
+            upOrDown = "↗"; arrowColor = Color(0xFF006400)
         }
     }
+
     val isPressed = remember { mutableStateOf(isSelected) }
     val pressedBackgroundColor = if (isDeleting == "true" && isPressed.value) {
         backgroundColor.copy(
-            red = backgroundColor.red * 0.2f,   // reduce the red component
-            green = backgroundColor.green * 0.2f,  // reduce the green component
-            blue = backgroundColor.blue * 0.2f,    // reduce the blue component
+            red = backgroundColor.red * 0.2f,
+            green = backgroundColor.green * 0.2f,
+            blue = backgroundColor.blue * 0.2f,
             alpha = 0.1f
         )
     } else {
-        backgroundColor.copy(alpha = 0.4f)  // Normal color when not pressed
+        backgroundColor.copy(alpha = 0.4f)
     }
-    Card(
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .padding(horizontal = 16.dp)
-            .clickable(
-                onClick = {
-                    isPressed.value = !isPressed.value
-                    if (isDeleting != "true") {
-                        navController.navigate("progress/${habitId}/Overall")
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (swipeOffset.value > maxSwipe * 0.5f) {
+                            showDeleteIcon.value = true
+                        } else {
+                            swipeOffset.value = 0f
+                            showDeleteIcon.value = false
+                        }
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        swipeOffset.value = (swipeOffset.value + dragAmount).coerceIn(0f, maxSwipe)
                     }
-                    else {
-                        onSelect(isPressed.value) // Update selected habits list
-                    }
-                },
-            ),
-        colors = CardDefaults.cardColors(containerColor = pressedBackgroundColor),
-        shape = RoundedCornerShape(20.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = pressedBackgroundColor.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(20.dp)
                 )
-                .padding(4.dp)
-        ) {
+            }
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        if (showDeleteIcon.value) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .matchParentSize()
+                    .background(Color.LightGray)
+                    .padding(start = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(0.4f)) {
-                    Text(
-                        text = habitName,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Text(
-                        text = habitDescription,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(0.6f)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(.5f)
-                                .padding(start = 10.dp)
-                        ) {
-                            Spacer(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .width(30.dp)
-                            )
-                            Text(
-                                text = "$streak Day",
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                            Text(
-                                text = "Streak \uD83D\uDD25",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Spacer(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .width(30.dp)
-                            )
+                IconButton(onClick = {
+                    if (user != null) {
+                        deleteHabitsFromFirestore(user, mutableSetOf(habitId), db) {
+                            Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
+                            isDeleted = true
                         }
-                        Column(
-                            modifier = Modifier
-                                .weight(.5f)
-                                .padding(end = 10.dp)
+                    }
+                }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier
+                .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                .fillMaxWidth()
+                .clickable {
+                    if (showDeleteIcon.value) {
+                        swipeOffset.value = 0f
+                        showDeleteIcon.value = false
+                    } else {
+                        isPressed.value = !isPressed.value
+                        if (isDeleting != "true") {
+                            navController.navigate("progress/${habitId}/Overall")
+                        } else {
+                            onSelect(isPressed.value)
+                        }
+                    }
+                },
+            colors = CardDefaults.cardColors(containerColor = pressedBackgroundColor),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = pressedBackgroundColor.copy(alpha = 0.4f), shape = RoundedCornerShape(20.dp))
+                    .padding(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(0.4f)) {
+                        Text(
+                            text = habitName,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = habitDescription,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(0.6f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Spacer(
+                            Column(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .width(30.dp)
-                            )
-                            Text(
-                                text = buildAnnotatedString {
-                                    append("$progress% ")
-                                    pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
-                                    append(upOrDown)
-                                    pop()
-                                },
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                            Text(
-                                text = "Complete",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Spacer(
+                                    .weight(.5f)
+                                    .padding(start = 10.dp)
+                            ) {
+                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
+                                Text("$streak Day", style = MaterialTheme.typography.titleLarge)
+                                Text("Streak 🔥", style = MaterialTheme.typography.bodyLarge)
+                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
+                            }
+                            Column(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .width(30.dp)
-                            )
+                                    .weight(.5f)
+                                    .padding(end = 10.dp)
+                            ) {
+                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
+                                Text(
+                                    text = buildAnnotatedString {
+                                        append("$progress% ")
+                                        pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
+                                        append(upOrDown)
+                                        pop()
+                                    },
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                                Text("Complete", style = MaterialTheme.typography.bodyLarge)
+                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
+                            }
                         }
                     }
                 }
@@ -645,3 +696,4 @@ fun HabitItem(habitId: String, navController: NavController, goodHabit: String, 
         }
     }
 }
+

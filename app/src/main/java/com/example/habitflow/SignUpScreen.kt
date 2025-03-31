@@ -16,7 +16,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun SignUpScreen(navController: NavController, auth: FirebaseAuth) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val errorMessage by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -59,11 +59,14 @@ fun SignUpScreen(navController: NavController, auth: FirebaseAuth) {
                                 }
                                 .addOnFailureListener { e ->
                                     println("Firestore error: ${e.message}")
+                                    errorMessage = "Firestore error: ${e.message}"
                                 }
                         }
                     }
                     .addOnFailureListener { e ->
                         println("Sign-Up Error: ${e.localizedMessage}")
+                        errorMessage = "Sign-Up Failed: ${e.localizedMessage}"
+
                     }
             }
         ) {
