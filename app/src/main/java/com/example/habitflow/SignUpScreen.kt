@@ -8,15 +8,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.habitflow.viewmodel.AuthViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun SignUpScreen(navController: NavController, auth: FirebaseAuth) {
+    val viewModel: AuthViewModel = viewModel()
+    val signUpState by viewModel.signUpState.collectAsState()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val errorMessage by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(signUpState) {
+        signUpState?.let { result ->
+            result.onSuccess {
+                navController.navigate("profileSetup")
+            }.onFailure {
+                errorMessage = it.localizedMessage
+            }
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -38,33 +52,8 @@ fun SignUpScreen(navController: NavController, auth: FirebaseAuth) {
 
         Button(
             onClick = {
-                auth.createUserWithEmailAndPassword(email, password)
-                    .addOnSuccessListener { result ->
-                        val user = result.user
-                        if (user != null) {
-                            val db = FirebaseFirestore.getInstance()
-                            val userDoc = db.collection("users").document(user.uid)
-
-                            val userData = hashMapOf(
-                                "email" to (user.email ?: ""),
-                                "name" to "",
-                                "age" to 0,
-                                "gender" to ""
-                            )
-
-                            userDoc.set(userData)
-                                .addOnSuccessListener {
-                                    println("User profile created successfully")
-                                    navController.navigate("profileSetup")
-                                }
-                                .addOnFailureListener { e ->
-                                    println("Firestore error: ${e.message}")
-                                }
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        println("Sign-Up Error: ${e.localizedMessage}")
-                    }
+                errorMessage = null
+                viewModel.signUp(email, password)
             }
         ) {
             Text("Sign Up")

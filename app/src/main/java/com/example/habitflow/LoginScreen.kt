@@ -18,16 +18,31 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.habitflow.viewmodel.AuthViewModel
 
 @Composable
-fun LoginScreen(navController: NavController, auth: FirebaseAuth) {
+fun LoginScreen(navController: NavController) {
 	val context = LocalContext.current
+	val viewModel: AuthViewModel = viewModel()
+	val loginState by viewModel.loginState.collectAsState()
 	var email by remember { mutableStateOf("") }
 	var password by remember { mutableStateOf("") }
 	var isPasswordVisible by remember { mutableStateOf(false) }
 	var isLoading by remember { mutableStateOf(false) }
 	var errorMessage by remember { mutableStateOf("") }
+
+	LaunchedEffect(loginState) {
+		loginState?.let { result ->
+			result.onSuccess {
+				Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+				navController.navigate("home/false")
+			}.onFailure {
+				errorMessage = "Login Failed: ${it.localizedMessage}"
+				viewModel.clearLoginState()
+			}
+		}
+	}
 
 	Column(
 		modifier = Modifier.fillMaxSize()
@@ -107,25 +122,12 @@ fun LoginScreen(navController: NavController, auth: FirebaseAuth) {
 				// Login Button
 				Button(
 					onClick = {
-						isLoading = true
-						errorMessage = "" // Clear previous errors
-
+						errorMessage = ""
 						if (email.isBlank() || password.isBlank()) {
 							errorMessage = "Email and password cannot be empty"
-							isLoading = false
-							return@Button
+						} else {
+							viewModel.loginUser(email, password)
 						}
-
-						auth.signInWithEmailAndPassword(email, password)
-							.addOnCompleteListener { task ->
-								isLoading = false
-								if (task.isSuccessful) {
-									Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-									navController.navigate("home/false")
-								} else {
-									errorMessage = "Login Failed. Check your credentials."
-								}
-							}
 					},
 					modifier = Modifier
 						.fillMaxWidth()

@@ -1,72 +1,91 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.example.habitflow
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.habitflow.viewmodel.AuthViewModel
+import com.example.habitflow.viewmodel.ProfileSetupViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun ProfileSetupScreen(navController: NavController) {
-    val auth = FirebaseAuth.getInstance()
-    val user = auth.currentUser
-    val db = FirebaseFirestore.getInstance()
-
-    var name by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance().currentUser
+    val viewModel: ProfileSetupViewModel = viewModel()
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Name") }
-        )
+        Text("Profile Setup", style = MaterialTheme.typography.headlineMedium)
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         OutlinedTextField(
-            value = age,
-            onValueChange = { age = it },
+            value = viewModel.name,
+            onValueChange = { viewModel.name = it },
+            label = { Text("Name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+            value = viewModel.age,
+            onValueChange = { viewModel.age = it },
             label = { Text("Age") },
-            visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
         )
 
+        Spacer(modifier = Modifier.height(10.dp))
+
         OutlinedTextField(
-            value = gender,
-            onValueChange = { gender = it },
-            label = { Text("Gender") }
+            value = viewModel.gender,
+            onValueChange = { viewModel.gender = it },
+            label = { Text("Gender") },
+            modifier = Modifier.fillMaxWidth()
         )
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         Button(
             onClick = {
-                val userData = mutableMapOf<String, Any>(
-                    "name" to name,
-                    "age" to (age.toIntOrNull() ?: 0),  // Explicit conversion
-                    "gender" to gender
-                )
-                if (user != null) {
-                    db.collection("users").document(user.uid)
-                        .set(userData)
-                        .addOnSuccessListener {
-                            println("User data saved successfully.")
-                            navController.navigate("home/false")  // ✅ Navigate only after success
+                auth?.uid?.let { uid ->
+                    viewModel.validateAndSave(
+                        uid = uid,
+                        onSuccess = {
+                            Toast.makeText(context, "Profile saved!", Toast.LENGTH_SHORT).show()
+                            navController.navigate("home/false")
+                        },
+                        onFailure = {
+                            Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_SHORT).show()
                         }
-                        .addOnFailureListener { e ->
-                            println("Error saving profile data: ${e.message}")
-                        }
+                    )
+                } ?: run {
+                    viewModel.error = "User not authenticated."
                 }
-            }
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Save & Continue")
+            Text("Save")
+        }
+
+        viewModel.error?.let {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
         }
     }
 }
