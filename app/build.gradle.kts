@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.habitflow"
-        minSdk = 24
+        minSdk = 25
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -76,6 +76,8 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.core:core-ktx:1.10.1")
+    implementation(libs.androidx.compose.material)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

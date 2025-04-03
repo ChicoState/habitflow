@@ -2,6 +2,8 @@ package com.example.habitflow
 
 import android.app.Application
 import androidx.compose.foundation.Image
+
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,6 +71,25 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import kotlin.math.roundToInt
+
+
+
+
 
 
 
@@ -438,43 +459,45 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
     val habitType = habit.type
     val backgroundColor = habit.backgroundColor
 
-    val userData = if (habitType == "good")
-        listOf(
-            DataLists.goodWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.goodMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.goodOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
-        )
-    else
-        listOf(
-            DataLists.badWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.badMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
-            DataLists.badOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
-        )
+    val context = LocalContext.current
+    val user = Firebase.auth.currentUser
+    val db = Firebase.firestore
+
+    val swipeOffset = remember { mutableStateOf(0f) }
+    val maxSwipe = 200f
+    val showDeleteIcon = remember { mutableStateOf(false) }
+
+    var isDeleted by remember { mutableStateOf(false) }
+    if (isDeleted) return // Don't show if deleted
+
+    val userData = if (habitType == "good") listOf(
+        DataLists.goodWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.goodMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.goodOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+    ) else listOf(
+        DataLists.badWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.badMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
+        DataLists.badOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
+    )
 
     val comparisonData = if (habitType == "good") listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) else listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3)
     val progress = if (userData[2].isNotEmpty()) {
         ((userData[2].last().x) / comparisonData[2].size * 100).toInt()
-    } else {
-        0
-    }
+    } else 0
+
     val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
+
     var arrowColor = Color.Red
     var upOrDown = "nan"
     if (isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
-        upOrDown = "↘"
-        arrowColor = Color(0xFF006400)
+        upOrDown = "↘"; arrowColor = Color(0xFF006400)
     } else if (isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
-        upOrDown = "↘"
-        arrowColor = Color.Red
+        upOrDown = "↘"; arrowColor = Color.Red
     } else {
         if (!isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
-            upOrDown = "↗"
-            arrowColor = Color.Red
-        } else {
-            if (!isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
-                upOrDown = "↗"
-                arrowColor = Color(0xFF006400)
-            }
+            upOrDown = "↗"; arrowColor = Color.Red
+        } else if (!isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
+            upOrDown = "↗"; arrowColor = Color(0xFF006400)
         }
     }
     val isPressed = isSelected
@@ -491,42 +514,80 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
     } else {
         Color.Transparent
     }
-    Card(
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .padding(horizontal = 16.dp)
-            .clickable(
-                onClick = {
-                    if (isDeleting != "true") {
-                        navController.navigate("progress/${habit.id}/Overall")
-                    } else {
-                        onSelect(!isPressed)
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (swipeOffset.value > maxSwipe * 0.5f) {
+                            showDeleteIcon.value = true
+                        } else {
+                            swipeOffset.value = 0f
+                            showDeleteIcon.value = false
+                        }
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        swipeOffset.value = (swipeOffset.value + dragAmount).coerceIn(0f, maxSwipe)
                     }
-                }
-            )
-            .border(2.dp, borderColor, RoundedCornerShape(20.dp)),
-        colors = CardDefaults.cardColors(containerColor = pressedBackgroundColor),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = pressedBackgroundColor.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(20.dp)
                 )
-                .padding(4.dp)
+            }
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        if (showDeleteIcon.value) {
+            Row(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.LightGray)
+                    .padding(start = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = {
+                    if (user != null) {
+                        deleteHabitsFromFirestore(user, mutableSetOf(habitId), db) {
+                            Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
+                            isDeleted = true
+                        }
+                    }
+                }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier
+                .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                .fillMaxWidth()
+                .clickable {
+                    if (showDeleteIcon.value) {
+                        swipeOffset.value = 0f
+                        showDeleteIcon.value = false
+                    } else {
+                        isPressed.value = !isPressed.value
+                        if (isDeleting != "true") {
+                            navController.navigate("progress/${habitId}/Overall")
+                        } else {
+                            onSelect(isPressed.value)
+                        }
+                    }
+                },
+            colors = CardDefaults.cardColors(containerColor = pressedBackgroundColor),
+            shape = RoundedCornerShape(20.dp)
         ) {
-            // This Box allows layering
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = pressedBackgroundColor.copy(alpha = 0.4f), shape = RoundedCornerShape(20.dp))
+                    .padding(4.dp)
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // existing Row content...
                     Column(modifier = Modifier.weight(0.4f)) {
                         Text(
                             text = habitName,
@@ -551,14 +612,8 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
                                     .padding(start = 10.dp)
                             ) {
                                 Spacer(modifier = Modifier.weight(1f).width(30.dp))
-                                Text(
-                                    text = "$streak Day",
-                                    style = MaterialTheme.typography.titleLarge,
-                                )
-                                Text(
-                                    text = "Streak 🔥",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
+                                Text("$streak Day", style = MaterialTheme.typography.titleLarge)
+                                Text("Streak 🔥", style = MaterialTheme.typography.bodyLarge)
                                 Spacer(modifier = Modifier.weight(1f).width(30.dp))
                             }
                             Column(
@@ -574,34 +629,13 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
                                         append(upOrDown)
                                         pop()
                                     },
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleLarge
                                 )
-                                Text(
-                                    text = "Complete",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
+                                Text("Complete", style = MaterialTheme.typography.bodyLarge)
                                 Spacer(modifier = Modifier.weight(1f).width(30.dp))
                             }
                         }
                     }
-                }
-
-                // ✅ Checkmark icon overlay in top-right if selected
-                if (isDeleting == "true" && isPressed) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(24.dp)
-                            .background(
-                                color = Color(0xFF00BCD4),
-                                shape = CircleShape
-                            )
-                            .padding(4.dp)
-                    )
                 }
             }
         }
