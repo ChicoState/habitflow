@@ -70,6 +70,245 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(navController: NavController, isDeleting: String) {
+    val user = FirebaseAuth.getInstance().currentUser
+    val context = LocalContext.current.applicationContext as Application
+    val viewModel: HomeViewModel = viewModel(
+        factory = HomeViewModelFactory(
+            application = context,
+            habitRepository = HabitRepository,
+            auth = FirebaseAuth.getInstance()
+        )
+    )
+    val habits by viewModel.habits.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadHabits()
+    }
+
+    val selectedHabits = remember { mutableStateOf(mutableSetOf<String>()) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Background Logo Image (centered)
+        Image(
+            painter = painterResource(id = R.drawable.habitflow_background),
+            contentDescription = "HabitFlow Logo Background",
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 140.dp) // leave space for bottom nav
+                .align(Alignment.Center),
+            alpha = 0.2f, // subtle opacity
+            contentScale = ContentScale.Fit
+        )
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "HabitFlow",
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                        user?.let {
+                            Text(
+                                text = it.displayName ?: "User",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { navController.navigate("settings") }) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (isDeleting == "true") {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Select Habits to Move:",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(habits, key = { it.id }) { habit ->
+                    HabitItem(
+                        habit = habit,
+                        navController = navController,
+                        isDeleting = isDeleting,
+                        isSelected = selectedHabits.value.contains(habit.id),
+                        onSelect = { isSelected: Boolean ->
+                            selectedHabits.value = selectedHabits.value.toMutableSet().apply {
+                                if (isSelected) add(habit.id) else remove(habit.id)
+                            }
+                        }
+                    )
+                }
+            }
+
+            if (habits.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No Habits Found", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
+        // BOTTOM ACTION BAR
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isDeleting != "true") {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = {
+                            navController.navigate("home/true")
+                        }) {
+                            Icon(
+                                Icons.Filled.Edit,
+                                contentDescription = "Edit",
+                                tint = Color(0xFF00897B),
+                                modifier = Modifier.size(50.dp)
+                            )
+                        }
+                        Text("Edit", style = MaterialTheme.typography.bodySmall)
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        FloatingActionButton(
+                            onClick = { navController.navigate("addHabit") },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(80.dp),
+                            shape = CircleShape,
+                            elevation = FloatingActionButtonDefaults.elevation(10.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Add Habit",
+                                modifier = Modifier.size(40.dp),
+                                tint = Color.White
+                            )
+                        }
+                        Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(onClick = { /* TODO: Stats */ }) {
+                            Icon(
+                                Icons.Filled.Info,
+                                contentDescription = "Stats",
+                                tint = Color(0xFF00897B),
+                                modifier = Modifier.size(50.dp)
+                            )
+                        }
+                        Text("Stats", style = MaterialTheme.typography.bodySmall)
+                    }
+                } else {
+                    // Deleting mode
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val buttonWidth = 130.dp
+                        val buttonHeight = 50.dp
+
+                        Button(
+                            onClick = {
+                                selectedHabits.value.clear()
+                                navController.navigate("home/false")
+                            },
+                            modifier = Modifier
+                                .width(buttonWidth)
+                                .height(buttonHeight),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Text("Cancel", fontSize = 14.sp, color = Color.White)
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (selectedHabits.value.isNotEmpty()) {
+                                    viewModel.moveToPastHabits(selectedHabits.value) {
+                                        selectedHabits.value.clear()
+                                        navController.navigate("home/false")
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .width(buttonWidth)
+                                .height(buttonHeight),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C3E50)),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Text("Save for Later", fontSize = 14.sp, color = Color.White)
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (selectedHabits.value.isNotEmpty()) {
+                                    viewModel.deleteHabits(selectedHabits.value) {
+                                        selectedHabits.value.clear()
+                                        navController.navigate("home/false")
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .width(buttonWidth)
+                                .height(buttonHeight),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Text("Delete Habits", fontSize = 14.sp, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
     if (list.isNotEmpty()) {
         val firstY = list.first().y
@@ -363,241 +602,6 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
                             )
                             .padding(4.dp)
                     )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HomeScreen(navController: NavController, isDeleting: String) {
-    val user = FirebaseAuth.getInstance().currentUser
-    val context = LocalContext.current.applicationContext as Application
-    val viewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(
-            application = context,
-            habitRepository = HabitRepository,
-            auth = FirebaseAuth.getInstance()
-        )
-    )
-    val habits by viewModel.habits.collectAsState()
-
-    LaunchedEffect(Unit) {
-        viewModel.loadHabits()
-    }
-
-    val selectedHabits = remember { mutableStateOf(mutableSetOf<String>()) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Background Logo Image (centered)
-        Image(
-            painter = painterResource(id = R.drawable.habitflow_background),
-            contentDescription = "HabitFlow Logo Background",
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 140.dp) // leave space for bottom nav
-                .align(Alignment.Center),
-            alpha = 0.2f, // subtle opacity
-            contentScale = ContentScale.Fit
-        )
-        Column(modifier = Modifier.fillMaxSize()) {
-
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "HabitFlow",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                        user?.let {
-                            Text(
-                                text = it.displayName ?: "User",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { navController.navigate("settings") }) {
-                        Icon(
-                            Icons.Filled.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (isDeleting == "true") {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Select Habits to Move:",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
-
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(habits, key = { it.id }) { habit ->
-                    HabitItem(
-                        habit = habit,
-                        navController = navController,
-                        isDeleting = isDeleting,
-                        isSelected = selectedHabits.value.contains(habit.id),
-                        onSelect = { isSelected: Boolean ->
-                            selectedHabits.value = selectedHabits.value.toMutableSet().apply {
-                                if (isSelected) add(habit.id) else remove(habit.id)
-                            }
-                        }
-                    )
-                }
-            }
-
-            if (habits.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No Habits Found", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-
-        // BOTTOM ACTION BAR
-        Box(
-            modifier = Modifier
-                .fillMaxSize(),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isDeleting != "true") {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        IconButton(onClick = {
-                            navController.navigate("home/true")
-                        }) {
-                            Icon(
-                                Icons.Filled.Edit,
-                                contentDescription = "Edit",
-                                tint = Color(0xFF00897B),
-                                modifier = Modifier.size(50.dp)
-                            )
-                        }
-                        Text("Edit", style = MaterialTheme.typography.bodySmall)
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        FloatingActionButton(
-                            onClick = { navController.navigate("addHabit") },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(80.dp),
-                            shape = CircleShape,
-                            elevation = FloatingActionButtonDefaults.elevation(10.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Add Habit",
-                                modifier = Modifier.size(40.dp),
-                                tint = Color.White
-                            )
-                        }
-                        Text("Add Habit", style = MaterialTheme.typography.bodyLarge)
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        IconButton(onClick = { /* TODO: Stats */ }) {
-                            Icon(
-                                Icons.Filled.Info,
-                                contentDescription = "Stats",
-                                tint = Color(0xFF00897B),
-                                modifier = Modifier.size(50.dp)
-                            )
-                        }
-                        Text("Stats", style = MaterialTheme.typography.bodySmall)
-                    }
-                } else {
-                    // Deleting mode
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val buttonWidth = 130.dp
-                        val buttonHeight = 50.dp
-
-                        Button(
-                            onClick = {
-                                selectedHabits.value.clear()
-                                navController.navigate("home/false")
-                            },
-                            modifier = Modifier
-                                .width(buttonWidth)
-                                .height(buttonHeight),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Text("Cancel", fontSize = 14.sp, color = Color.White)
-                            }
-                        }
-
-                        Button(
-                            onClick = {
-                                if (selectedHabits.value.isNotEmpty()) {
-                                    viewModel.moveToPastHabits(selectedHabits.value) {
-                                        selectedHabits.value.clear()
-                                        navController.navigate("home/false")
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .width(buttonWidth)
-                                .height(buttonHeight),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C3E50)),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Text("Save for Later", fontSize = 14.sp, color = Color.White)
-                            }
-                        }
-
-                        Button(
-                            onClick = {
-                                if (selectedHabits.value.isNotEmpty()) {
-                                    viewModel.deleteHabits(selectedHabits.value) {
-                                        selectedHabits.value.clear()
-                                        navController.navigate("home/false")
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .width(buttonWidth)
-                                .height(buttonHeight),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Text("Delete Habits", fontSize = 14.sp, color = Color.White)
-                            }
-                        }
-                    }
                 }
             }
         }
