@@ -82,9 +82,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
+import kotlin.collections.setOf
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlin.math.roundToInt
 
 
@@ -175,6 +178,7 @@ fun HomeScreen(navController: NavController, isDeleting: String) {
                 items(habits, key = { it.id }) { habit ->
                     HabitItem(
                         habit = habit,
+                        viewModel = viewModel,
                         navController = navController,
                         isDeleting = isDeleting,
                         isSelected = selectedHabits.value.contains(habit.id),
@@ -453,7 +457,7 @@ fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
 }
 
 @Composable
-fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
+fun HabitItem(habit: Habit, viewModel: HomeViewModel, navController: NavController, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val habitName = habit.name
     val habitDescription = habit.description
     val habitType = habit.type
@@ -500,7 +504,7 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
             upOrDown = "↗"; arrowColor = Color(0xFF006400)
         }
     }
-    val isPressed = isSelected
+    var isPressed by remember { mutableStateOf(isSelected) }
     val isDarkTheme = isSystemInDarkTheme()
 
     val pressedBackgroundColor = if (isDeleting == "true" && isPressed) {
@@ -544,11 +548,10 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = {
-                    if (user != null) {
-                        deleteHabitsFromFirestore(user, mutableSetOf(habitId), db) {
-                            Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
-                            isDeleted = true
-                        }
+                    viewModel.deleteHabits(setOf(habit.id)) {
+                        navController.navigate("home/false")
+                        Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
+                        isDeleted = true
                     }
                 }) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
@@ -565,11 +568,11 @@ fun HabitItem(habit: Habit, navController: NavController, isDeleting: String, is
                         swipeOffset.value = 0f
                         showDeleteIcon.value = false
                     } else {
-                        isPressed.value = !isPressed.value
+                        isPressed = !isPressed
                         if (isDeleting != "true") {
-                            navController.navigate("progress/${habitId}/Overall")
+                            navController.navigate("progress/${habit.id}/Overall")
                         } else {
-                            onSelect(isPressed.value)
+                            onSelect(isPressed)
                         }
                     }
                 },
