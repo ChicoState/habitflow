@@ -74,6 +74,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.firebase.auth.ktx)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.core:core-ktx:1.10.1")
     implementation(libs.androidx.compose.material)
 
     testImplementation(libs.junit)

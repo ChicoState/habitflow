@@ -1,58 +1,46 @@
 package com.example.habitflow.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
+    primary = hf_mid_blue,
+    onPrimary = hf_text_primary,
+    secondary = hf_teal,
+    onSecondary = hf_text_primary,
+    background = hf_background,
+    onBackground = hf_text_primary,
+    surface = hf_surface,
+    onSurface = hf_text_primary,
+    primaryContainer = hf_primary_container_dark,
+    onPrimaryContainer = hf_text_primary,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = hf_teal,
+    onPrimary = hf_dark_blue,
+    secondary = hf_mid_blue,
+    onSecondary = hf_text_primary,
+    background = Color(0xFFFFFFFF),
+    onBackground = hf_dark_blue,
+    surface = Color(0xFFF5F5F5),
+    onSurface = hf_dark_blue,
+    primaryContainer = hf_primary_container_light,
+    onPrimaryContainer = hf_dark_blue,
 )
 
 @Composable
 fun HabitflowTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = Typography(),
         content = content
     )
 }
