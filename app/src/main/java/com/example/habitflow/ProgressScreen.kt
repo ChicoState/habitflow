@@ -20,7 +20,6 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 import com.github.mikephil.charting.components.XAxis
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -33,6 +32,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.content.SharedPreferences
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.habitflow.viewmodel.ProgressViewModel
 
 
 @Composable
@@ -42,20 +44,14 @@ fun ProgressScreen(
     span: String,
     sharedPreferences: SharedPreferences
 ) {
-    // Dummy data for cigarettes smoked each day (replace with actual data logic)
-    val parts = habitId.split(":")
-    var habit by remember { mutableStateOf<Habit?>(null) }
-    var habitName: String = ""
-    var habitType: String = ""
+
+    val viewModel: ProgressViewModel = viewModel()
+    val habitState by viewModel.habit.collectAsState()
+    val habitName = habitState?.name ?: ""
+    val habitType = habitState?.type ?: ""
 
     LaunchedEffect(habitId) {
-        getHabitFromFirestore(habitId) { fetchedHabit ->
-            habit = fetchedHabit // Store the fetched habit in the state
-        }
-    }
-    habit?.let { habitNonNull ->
-        habitName = habitNonNull.name
-        habitType = habitNonNull.type
+        viewModel.loadHabit(habitId)
     }
 
     val userDataList = if (habitType== "good" )
@@ -79,22 +75,40 @@ fun ProgressScreen(
         mutableStateOf(sharedPreferences.getBoolean("dark_mode", false))
     }
 
-    ////// Adding in variables for calculating streak, progress, and overacheiver data, and dates
 
 
-    val progress = ((userDataList[2][userDataList[2].size-1].x) / comparisonDataList[2].size * 100) //.toFloat()
-    val streak =
-        if (habitType == "good")
-        { (countMatchingFromEndGood(userDataList[2], comparisonDataList[2])) }
-        else { (countMatchingFromEndBad(userDataList[2], comparisonDataList[2])) }
+    val progress = if (
+        userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
+    ) {
+        (userDataList[2].last().x / comparisonDataList[2].size) * 100
+    } else {
+        0f
+    }
+    val streak = if (
+        userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
+    ) {
+        if (habitType == "good") {
+            countMatchingFromEndGood(userDataList[2], comparisonDataList[2])
+        } else {
+            countMatchingFromEndBad(userDataList[2], comparisonDataList[2])
+        }
+    } else 0
 
-    val larger =
-        if (habitType == "good" )
-        { countDaysWithLargerY(userDataList[2], comparisonDataList[2]) }
-        else { countDaysWithSmallerY(userDataList[2], comparisonDataList[2]) }
+    val larger = if (
+        userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
+    ) {
+        if (habitType == "good") {
+            countDaysWithLargerY(userDataList[2], comparisonDataList[2])
+        } else {
+            countDaysWithSmallerY(userDataList[2], comparisonDataList[2])
+        }
+    } else 0
     val goalMet = compareLists(userData, comparisonData)
-    val dates = convertToDates(userData, "2/5/25")
-
+    val dates = if (userData.isNotEmpty()) {
+        convertToDates(userData, "2/5/25")
+    } else {
+        emptyList()
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////
 
@@ -143,7 +157,7 @@ fun ProgressScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
 
-            //////////////////// Adding in three top rows for prgoress, streak, and overacheiver
+            //////////////////// Adding in three top rows for progress, streak, and overachiever
 
 
             Row(
@@ -283,7 +297,7 @@ fun ProgressScreen(
             //////////////////////////////////////////////////////////////////////////////////
 
 
-            //////////////// Moving buttons to the middle of the screen: weekly, montly, and overall
+            //////////////// Moving buttons to the middle of the screen: weekly, monthly, and overall
 
 
             Spacer(modifier = Modifier.padding(16.dp))
@@ -348,7 +362,12 @@ fun ProgressScreen(
                     .padding(8.dp)
             ) {
                 Column(horizontalAlignment = Alignment.Start) {
-                    LineChartView(dataSets = listOf(userData, comparisonData))
+                    LineChartView(
+                        dataSets = listOf(
+                            userData,
+                            habitState?.goalData?.map { Entry(it.x, it.y) } ?: emptyList()
+                        )
+                    )
                 }
             }
 
@@ -376,46 +395,40 @@ fun ProgressScreen(
                         modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
                     )
                 }
-
-                // Table Data - LazyColumn with rows
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(goalMet.reversed()) { entry ->
+                // Table Data
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f) // <-- ✅ Proper constraint inside Column
+                ) {
+                    itemsIndexed(goalMet.reversed(), key = { _, entry -> "${entry.x}-${entry.y}" }) { index, entry ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                //.padding(vertical = 1.dp) // Padding between rows
-                                .background(if (goalMet.indexOf(entry) % 2 == 0) Color.LightGray else Color.Transparent) // Alternating row colors
-                                .border(1.dp, Color.Gray), // Border around each row
+                                .background(if (index % 2 == 0) Color.LightGray else Color.Transparent)
+                                .border(1.dp, Color.Gray),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
                                 text = entry.x.toString(),
-                                modifier = Modifier
-                                    .padding(start = 8.dp), // Padding around text
+                                modifier = Modifier.padding(start = 8.dp),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
                                 text = entry.y.toString(),
-                                modifier = Modifier
-                                    .padding(2.dp), // Padding around text
+                                modifier = Modifier.padding(2.dp),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
                 }
             }
-
-
-            ///////////////////////////////////////////////////////////////////////////////////
-
-
         }
     }
 }
 
 @Composable
 fun LineChartView(dataSets: List<List<Entry>>) {
-    //val parts = habit.split(":")
     val lineDataSets = mutableListOf<LineDataSet>()
     dataSets.mapIndexed { index, data ->
         val label = when (index) {
