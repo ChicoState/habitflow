@@ -1,6 +1,9 @@
 package com.example.habitflow.model
 
+import com.google.firebase.Timestamp
+
 data class NewHabit(
+	var id: String = "",
 	val name: String = "",
 	val description: String = "",
 	val type: String = "",  // "good" or "bad"
@@ -16,5 +19,10 @@ data class NewHabit(
 	val deadline: String? = null,       // ISO string or a formatted date; if null then ongoing
 	val startDate: String? = null,
 	val customReminderValue: String? = null,
-	val customReminderUnit: String? = null
+	val customReminderUnit: String? = null,
+	var notificationTriggered: Boolean? = true,
+	var createDate: Timestamp = Timestamp.now(),
+	var userDataId: String = ""
+	//val userDataId: String,  // The user ID who created the habit
+
 )

@@ -3,7 +3,7 @@ package com.example.habitflow.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.habitflow.Habit
+import com.example.habitflow.model.Habit
 import com.example.habitflow.repository.HabitRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +37,8 @@ class HomeViewModel(
 							habit?.let { loaded.add(it) }
 							remaining--
 							if (remaining == 0) {
-								_habits.value = loaded
+								val sortedHabits = loaded.sortedBy { it.createDate.toDate() }
+								_habits.value = sortedHabits
 							}
 						}
 					}
@@ -48,7 +49,6 @@ class HomeViewModel(
 	}
 
 	fun moveToPastHabits(habitIds: Set<String>, onComplete: () -> Unit) {
-		// You can implement this later with its own repo method if needed
 		onComplete()
 	}
 
@@ -65,4 +65,5 @@ class HomeViewModel(
 			}
 		)
 	}
+
 }

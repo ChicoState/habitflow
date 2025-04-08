@@ -84,7 +84,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import kotlin.collections.setOf
 import androidx.compose.ui.unit.dp
+import com.example.habitflow.model.Habit
+import com.example.habitflow.viewmodel.AddDataViewModel
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -100,20 +104,22 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController, isDeleting: String) {
+fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController, isDeleting: String) {
     val user = FirebaseAuth.getInstance().currentUser
     val context = LocalContext.current.applicationContext as Application
-    val viewModel: HomeViewModel = viewModel(
+    val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
             application = context,
             habitRepository = HabitRepository,
             auth = FirebaseAuth.getInstance()
         )
     )
-    val habits by viewModel.habits.collectAsState()
+    //val addDataViewModel: AddDataViewModel = viewModel()
+
+    val habits by homeViewModel.habits.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.loadHabits()
+        homeViewModel.loadHabits()
     }
 
     val selectedHabits = remember { mutableStateOf(mutableSetOf<String>()) }
@@ -178,7 +184,8 @@ fun HomeScreen(navController: NavController, isDeleting: String) {
                 items(habits, key = { it.id }) { habit ->
                     HabitItem(
                         habit = habit,
-                        viewModel = viewModel,
+                        homeViewModel = homeViewModel,
+                        dataViewModel = addDataViewModel,
                         navController = navController,
                         isDeleting = isDeleting,
                         isSelected = selectedHabits.value.contains(habit.id),
@@ -289,7 +296,7 @@ fun HomeScreen(navController: NavController, isDeleting: String) {
                         Button(
                             onClick = {
                                 if (selectedHabits.value.isNotEmpty()) {
-                                    viewModel.moveToPastHabits(selectedHabits.value) {
+                                    homeViewModel.moveToPastHabits(selectedHabits.value) {
                                         selectedHabits.value.clear()
                                         navController.navigate("home/false")
                                     }
@@ -310,7 +317,7 @@ fun HomeScreen(navController: NavController, isDeleting: String) {
                         Button(
                             onClick = {
                                 if (selectedHabits.value.isNotEmpty()) {
-                                    viewModel.deleteHabits(selectedHabits.value) {
+                                    homeViewModel.deleteHabits(selectedHabits.value) {
                                         selectedHabits.value.clear()
                                         navController.navigate("home/false")
                                     }
@@ -457,7 +464,7 @@ fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
 }
 
 @Composable
-fun HabitItem(habit: Habit, viewModel: HomeViewModel, navController: NavController, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
+fun HabitItem(habit: Habit, homeViewModel: HomeViewModel, dataViewModel: AddDataViewModel, navController: NavController, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val habitName = habit.name
     val habitDescription = habit.description
     val habitType = habit.type
@@ -518,6 +525,12 @@ fun HabitItem(habit: Habit, viewModel: HomeViewModel, navController: NavControll
     } else {
         Color.Transparent
     }
+    // Add the checkmark or plus icon here
+    val notificationIcon = when (habit.notificationTriggered) {
+        true -> Icons.Default.Add // Plus sign icon for triggered
+        false -> Icons.Default.Check // Checkmark icon for not triggered
+        null -> Icons.Default.Check // Or any neutral icon for null, can also be left out if not needed
+    }
 
     Box(
         modifier = Modifier
@@ -548,7 +561,7 @@ fun HabitItem(habit: Habit, viewModel: HomeViewModel, navController: NavControll
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = {
-                    viewModel.deleteHabits(setOf(habit.id)) {
+                    homeViewModel.deleteHabits(setOf(habit.id)) {
                         navController.navigate("home/false")
                         Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
                         isDeleted = true
@@ -591,56 +604,55 @@ fun HabitItem(habit: Habit, viewModel: HomeViewModel, navController: NavControll
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.weight(0.4f)) {
+                    Column(
+                    ) {
                         Text(
                             text = habitName,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                         )
                         Text(
-                            text = habitDescription,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 4.dp)
+                            text = buildAnnotatedString {
+                                append("$progress% ")
+                                append("Complete")
+                            },
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(0.6f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .weight(.5f)
-                                    .padding(start = 10.dp)
-                            ) {
-                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
-                                Text("$streak Day", style = MaterialTheme.typography.titleLarge)
-                                Text("Streak 🔥", style = MaterialTheme.typography.bodyLarge)
-                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
+                    Column(
+                    ) {
+                        Text(
+                            text = "$streak Day",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Streak 🔥",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                    Column(
+                    ) {
+                        Text(
+                            text = buildAnnotatedString {
+                                pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
+                                append(upOrDown)
+                                pop()
                             }
-                            Column(
-                                modifier = Modifier
-                                    .weight(.5f)
-                                    .padding(end = 10.dp)
-                            ) {
-                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
-                                Text(
-                                    text = buildAnnotatedString {
-                                        append("$progress% ")
-                                        pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
-                                        append(upOrDown)
-                                        pop()
-                                    },
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                                Text("Complete", style = MaterialTheme.typography.bodyLarge)
-                                Spacer(modifier = Modifier.weight(1f).width(30.dp))
-                            }
-                        }
+                        )
                     }
                 }
             }
+        }
+        // IconButton in the upper-right corner for each habit
+        IconButton(
+            onClick = {
+                dataViewModel.setHabit(habit)
+                navController.navigate("addData")
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd) // Align to top-right of the card
+                .padding(2.dp)
+        ) {
+            Icon(notificationIcon, contentDescription = "Notification Icon")
         }
     }
 }

@@ -2,7 +2,7 @@ package com.example.habitflow.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.habitflow.Habit
+import com.example.habitflow.model.Habit
 import com.example.habitflow.repository.HabitRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

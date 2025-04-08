@@ -2,9 +2,10 @@ package com.example.habitflow.repository
 
 import android.content.Context
 import androidx.work.*
-import com.example.habitflow.GoalPoint
-import com.example.habitflow.Habit
+import com.example.habitflow.model.GoalPoint
+import com.example.habitflow.model.Habit
 import com.example.habitflow.model.NewHabit
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -73,6 +74,8 @@ object HabitRepository {
 							if (x != null && y != null) GoalPoint(x, y) else null
 						}
 					},
+					createDate = (data["createDate"] as? Timestamp) ?: Timestamp.now(),
+					userDataId = data["userDataId"] as? String ?: ""
 				)
 
 				onComplete(habit)
@@ -106,6 +109,8 @@ object HabitRepository {
 			"startDate" to habit.startDate,
 			"customReminderValue" to habit.customReminderValue,
 			"customReminderUnit" to habit.customReminderUnit,
+			"createDate" to habit.createDate,
+			"userDataId" to habit.userDataId
 		)
 
 		db.collection("habits").add(habitData).addOnSuccessListener { docRef ->
@@ -191,3 +196,4 @@ object HabitRepository {
 		)
 	}
 }
+
