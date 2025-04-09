@@ -81,6 +81,7 @@ class AddHabitViewModel : ViewModel() {
 			startDate = if (startDate.isNotBlank()) startDate else null,
 			customReminderValue = customReminderValue.takeIf { it.isNotBlank() },
 			customReminderUnit = customReminderUnit.takeIf { it.isNotBlank() },
+			userDataId = ""
 		)
 
 
@@ -90,7 +91,7 @@ class AddHabitViewModel : ViewModel() {
 			user = user,
 			habit = newHabit,
 			onSuccess = onSuccess,
-			onFailure = onFailure
+			onFailure = onFailure,
 		)
 	}
 }

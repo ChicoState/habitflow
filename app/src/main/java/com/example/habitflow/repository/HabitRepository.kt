@@ -75,6 +75,7 @@ object HabitRepository {
 						}
 					},
 					createDate = (data["createDate"] as? Timestamp) ?: Timestamp.now(),
+					deadline = (data["createDate"] as? String) ?: "",
 					userDataId = data["userDataId"] as? String ?: ""
 				)
 

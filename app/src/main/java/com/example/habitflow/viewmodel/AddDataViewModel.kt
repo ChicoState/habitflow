@@ -2,12 +2,21 @@ package com.example.habitflow.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.habitflow.model.Habit
+import com.example.habitflow.model.UserData
+import com.example.habitflow.repository.DataRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class AddDataViewModel : ViewModel() {
+class AddDataViewModel(
+    private val dataRepository: DataRepository = DataRepository()
+    ) : ViewModel() {
 
     private var habit: Habit? = null
 

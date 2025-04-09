@@ -76,6 +76,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -85,6 +86,8 @@ import androidx.compose.ui.unit.IntOffset
 import kotlin.collections.setOf
 import androidx.compose.ui.unit.dp
 import com.example.habitflow.model.Habit
+import com.example.habitflow.model.UserData
+import com.example.habitflow.repository.DataRepository
 import com.example.habitflow.viewmodel.AddDataViewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
@@ -110,13 +113,14 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
             application = context,
+            dataRepository = DataRepository(),
             habitRepository = HabitRepository,
             auth = FirebaseAuth.getInstance()
         )
     )
     //val addDataViewModel: AddDataViewModel = viewModel()
 
-    val habits by homeViewModel.habits.collectAsState()
+    val habitsMap by homeViewModel.habits.collectAsState()
 
     LaunchedEffect(Unit) {
         homeViewModel.loadHabits()
@@ -181,10 +185,10 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
             }
 
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(habits, key = { it.id }) { habit ->
+                items(habitsMap.entries.toList(), key = { it.key.id }) { (habit, userData) ->
                     HabitItem(
                         habit = habit,
-                        homeViewModel = homeViewModel,
+                        userData2 = userData,
                         dataViewModel = addDataViewModel,
                         navController = navController,
                         isDeleting = isDeleting,
@@ -198,7 +202,7 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
                 }
             }
 
-            if (habits.isEmpty()) {
+            if (habitsMap.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No Habits Found", style = MaterialTheme.typography.bodyMedium)
                 }
@@ -316,12 +320,12 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
 
                         Button(
                             onClick = {
-                                if (selectedHabits.value.isNotEmpty()) {
+                                /*if (selectedHabits.value.isNotEmpty()) {
                                     homeViewModel.deleteHabits(selectedHabits.value) {
                                         selectedHabits.value.clear()
                                         navController.navigate("home/false")
                                     }
-                                }
+                                }*/
                             },
                             modifier = Modifier
                                 .width(buttonWidth)
@@ -339,15 +343,6 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
             }
         }
     }
-}
-
-fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
-    if (list.isNotEmpty()) {
-        val firstY = list.first().y
-        val lastY = list.last().y
-        return firstY > lastY
-    }
-    return false
 }
 
 fun countMatchingFromEnd(list1: List<Entry>, list2: List<Entry>): Int {
@@ -442,6 +437,14 @@ fun convertToDates(entries: List<Entry>, startDate: String): List<String> {
         sdf.format(calendar.time)
     }
 }
+private fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
+    if (list.isNotEmpty()) {
+        val firstY = list.first().y
+        val lastY = list.last().y
+        return firstY > lastY
+    }
+    return false
+}
 
 fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
     val resultList = mutableListOf<Entry>()
@@ -464,15 +467,14 @@ fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
 }
 
 @Composable
-fun HabitItem(habit: Habit, homeViewModel: HomeViewModel, dataViewModel: AddDataViewModel, navController: NavController, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
+fun HabitItem(habit: Habit, userData2: UserData?, dataViewModel: AddDataViewModel, navController: NavController, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
     val habitName = habit.name
-    val habitDescription = habit.description
+    val userDataId = habit.userDataId
     val habitType = habit.type
     val backgroundColor = habit.backgroundColor
+    val totalDays = habit.totalDays
 
     val context = LocalContext.current
-    val user = Firebase.auth.currentUser
-    val db = Firebase.firestore
 
     val swipeOffset = remember { mutableStateOf(0f) }
     val maxSwipe = 200f
@@ -560,13 +562,15 @@ fun HabitItem(habit: Habit, homeViewModel: HomeViewModel, dataViewModel: AddData
                     .padding(start = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {
-                    homeViewModel.deleteHabits(setOf(habit.id)) {
+                IconButton(
+                    onClick = {
+                        /*homeViewModel.deleteHabits(setOf(habit.id)) {
                         navController.navigate("home/false")
                         Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
                         isDeleted = true
+                        }*/
                     }
-                }) {
+                ) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
                 }
             }
@@ -639,6 +643,12 @@ fun HabitItem(habit: Habit, homeViewModel: HomeViewModel, dataViewModel: AddData
                             }
                         )
                     }
+                        if (!userDataId.isNullOrEmpty()) {
+                            UserDataDisplay(userData2)
+                        }
+                        else {
+                            Text("Loading or No Data")
+                        }
                 }
             }
         }
@@ -656,3 +666,17 @@ fun HabitItem(habit: Habit, homeViewModel: HomeViewModel, dataViewModel: AddData
         }
     }
 }
+
+@Composable
+fun UserDataDisplay(userData: UserData?) {
+    if (userData == null || userData.userData.isNullOrEmpty()) {
+        Text("No Data Available")
+    } else {
+        Column {
+            userData.userData.forEach { entry ->
+                Text(text = "x: ${entry.x}, y: ${entry.y}")
+            }
+        }
+    }
+}
+
