@@ -9,6 +9,7 @@ import com.example.habitflow.model.UserData
 import com.example.habitflow.repository.DataRepository
 import com.example.habitflow.repository.HabitRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,7 +77,7 @@ class HomeViewModel(
 	private fun loadUserDataForHabit(habit: Habit, onComplete: (UserData?) -> Unit) {
 		viewModelScope.launch {
 			val userDataId = habit.userDataId
-			if (userDataId.isNullOrEmpty()) {
+			if (userDataId.isEmpty()) {
 				onComplete(null)
 			} else {
 				dataRepository.loadUserDataFromFirestore(
@@ -97,17 +98,57 @@ class HomeViewModel(
 		onComplete()
 	}
 
-	/*fun deleteHabits(habitIds: Set<String>, onComplete: () -> Unit) {
+	fun deleteHabits(habitIds: Set<String>, onComplete: () -> Unit) {
 		val user = auth.currentUser ?: return
+
+		// Extract the habits to delete from the map, based on habitIds
+		val habitsToDelete = _habits.value.filterKeys { habitIds.contains(it.id) }
+
+		// Extract valid userDataIds
+		val userDataIds = habitsToDelete.mapNotNull { (habit, _) ->
+			habit.userDataId.takeIf { it.isNotBlank() }
+		}
+
+		// If there are userDataIds, delete them first
+		if (userDataIds.isNotEmpty()) {
+			var completedCount = 0
+			val totalToDelete = userDataIds.size
+
+			userDataIds.forEach { userDataId ->
+				// Call deleteUserData for each userDataId
+				dataRepository.deleteUserData(userDataId) { _ ->
+					completedCount++
+
+					if (completedCount == totalToDelete) {
+						// delete habits
+						proceedToDeleteHabits(habitIds, user, onComplete)
+					}
+				}
+			}
+		} else {
+			// No userDataIds to delete, proceed directly with habit deletion
+			proceedToDeleteHabits(habitIds, user, onComplete)
+		}
+	}
+
+	// Helper function to delete habits and update local state
+	private fun proceedToDeleteHabits(
+		habitIds: Set<String>,
+		user: FirebaseUser,
+		onComplete: () -> Unit
+	) {
 		habitRepository.deleteHabitsForUser(
-			context = getApplication(),  // you need to pass context
+			context = getApplication(),
 			user = user,
 			habitIds = habitIds,
 			onComplete = {
-				val currentList = _habits.value
-				_habits.value = currentList.filterNot { habitIds.contains(it.id) }
+				// Remove the deleted habits from the _habits map
+				_habits.value = _habits.value.filterKeys { habit -> !habitIds.contains(habit.id) }
 				onComplete()
 			}
 		)
-	}*/
+	}
+
+
+
 }

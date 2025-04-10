@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.habitflow.model.NewHabit
@@ -16,26 +18,23 @@ class AddHabitViewModel : ViewModel() {
 	var habitDescription by mutableStateOf("")
 	var isGoodHabit by mutableStateOf(false)
 	var isBadHabit by mutableStateOf(false)
-	var duration by mutableStateOf(0)
+	var duration by mutableIntStateOf(0)
 	var reminders by mutableStateOf(false)
-	var texts by mutableStateOf(false)
 	var hourly by mutableStateOf(false)
 	var daily by mutableStateOf(false)
 	var weekly by mutableStateOf(false)
 	var custom by mutableStateOf(false)
-	var endAmount by mutableStateOf(0f)
+	var endAmount by mutableFloatStateOf(0f)
 	var precision by mutableStateOf("")
 	var wholeNumbers by mutableStateOf(false)
 	var tenths by mutableStateOf(false)
 	var hundredths by mutableStateOf(false)
-	var trackingMethod by mutableStateOf("binary")
 	var category by mutableStateOf("General")
-	var frequency by mutableStateOf("")
+	private var frequency by mutableStateOf("")
 	var deadline by mutableStateOf("")
-	var startDate by mutableStateOf("")
+	private var startDate by mutableStateOf("")
 	var customReminderValue by mutableStateOf("")
-	var customReminderUnit by mutableStateOf("Days") // or "Hours"
-	var customInterval by mutableStateOf(1)
+	var customReminderUnit by mutableStateOf("Days")
 	var showDescriptionField by mutableStateOf(false)
 	var trackingMethodLabel by mutableStateOf("Yes/No")
 
@@ -46,7 +45,7 @@ class AddHabitViewModel : ViewModel() {
 		hundredths = value == "hundredths"
 	}
 	// Derived property for goal data:
-	val goalData: List<Map<String, Any>>
+	private val goalData: List<Map<String, Any>>
 		get() = generateGoalDataForFirestore(duration, endAmount, precision)
 
 	fun saveHabitToFirestore(context: Context, onSuccess: () -> Unit, onFailure: (String) -> Unit) {

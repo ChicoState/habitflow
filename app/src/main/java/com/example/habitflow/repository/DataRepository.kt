@@ -1,7 +1,6 @@
 package com.example.habitflow.repository
 
 import android.util.Log
-import androidx.compose.material3.Text
 import com.example.habitflow.model.UserData
 import com.github.mikephil.charting.data.Entry
 import com.google.firebase.firestore.FirebaseFirestore
@@ -35,6 +34,26 @@ class DataRepository {
             }
     }
 
+    fun deleteUserData(userDataId: String, onComplete: (Boolean) -> Unit) {
+        if (userDataId.isBlank()) {
+            onComplete(false)
+            return
+        }
+
+        val db = FirebaseFirestore.getInstance()
+        val docRef = db.collection("userData").document(userDataId)
+
+        docRef.delete()
+            .addOnSuccessListener {
+                onComplete(true)
+            }
+            .addOnFailureListener { exception ->
+                exception.printStackTrace()
+                onComplete(false)
+            }
+    }
+
+
     private fun parseUserData(data: Map<String, Any>?): UserData {
         // Fetch the 'data' field which should be a list of maps
         val rawEntries = (data?.get("data") as? List<*>)?.mapNotNull { item ->
@@ -54,9 +73,14 @@ class DataRepository {
 
         // Calculate the time differences for each entry
         val entriesWithTimeDifference = calculateTimeDifferences(rawEntries)
+        val lastUpdated = data?.get("lastUpdated") as? Timestamp ?: Timestamp.now()
 
         // Return UserData with the calculated entries and a decreasing flag
-        return UserData(userData = entriesWithTimeDifference, decreasing = isDecreasing(entriesWithTimeDifference))
+        return UserData(
+            userData = entriesWithTimeDifference,
+            decreasing = isDecreasing(entriesWithTimeDifference),
+            lastUpdated = lastUpdated
+        )
     }
 
 

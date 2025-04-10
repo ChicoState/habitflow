@@ -98,7 +98,7 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(navController, isDarkMode, sharedPreferences)
                         }
                         composable("addData") {
-                            AddDataScreen(viewModel = addDataViewModel, navController = navController, sharedPreferences = sharedPreferences)
+                            AddDataScreen(viewModel = addDataViewModel, navController = navController)
                         }
                     }
                 }

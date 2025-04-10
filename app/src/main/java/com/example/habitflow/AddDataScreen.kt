@@ -1,6 +1,5 @@
 package com.example.habitflow
 
-import android.content.SharedPreferences
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -16,8 +15,7 @@ import com.example.habitflow.viewmodel.AddDataViewModel
 @Composable
 fun AddDataScreen(
     viewModel: AddDataViewModel,
-    navController: NavController,
-    sharedPreferences: SharedPreferences
+    navController: NavController
 ) {
     // Access the entire habit object from ViewModel
     val habit = viewModel.retrieveHabit()

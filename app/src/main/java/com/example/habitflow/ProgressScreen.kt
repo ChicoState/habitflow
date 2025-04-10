@@ -28,8 +28,6 @@ import android.graphics.Color as AndroidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-///// new import
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.content.SharedPreferences
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -71,7 +69,7 @@ fun ProgressScreen(
         else { comparisonDataList[2] }
 
     // ✅ Get the current Dark Mode value from SharedPreferences
-    var darkMode by remember {
+    val darkMode by remember {
         mutableStateOf(sharedPreferences.getBoolean("dark_mode", false))
     }
 
@@ -88,9 +86,9 @@ fun ProgressScreen(
         userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
     ) {
         if (habitType == "good") {
-            countMatchingFromEndGood(userDataList[2], comparisonDataList[2])
+            viewModel.countMatchingFromEndGood(userDataList[2], comparisonDataList[2])
         } else {
-            countMatchingFromEndBad(userDataList[2], comparisonDataList[2])
+            viewModel.countMatchingFromEndBad(userDataList[2], comparisonDataList[2])
         }
     } else 0
 
@@ -98,22 +96,17 @@ fun ProgressScreen(
         userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
     ) {
         if (habitType == "good") {
-            countDaysWithLargerY(userDataList[2], comparisonDataList[2])
+            viewModel.countDaysWithLargerY(userDataList[2], comparisonDataList[2])
         } else {
-            countDaysWithSmallerY(userDataList[2], comparisonDataList[2])
+            viewModel.countDaysWithSmallerY(userDataList[2], comparisonDataList[2])
         }
     } else 0
-    val goalMet = compareLists(userData, comparisonData)
-    val dates = if (userData.isNotEmpty()) {
-        convertToDates(userData, "2/5/25")
+    val goalMet = viewModel.compareLists(userData, comparisonData)
+    /*val dates = if (userData.isNotEmpty()) {
+        viewModel.convertToDates(userData, "2/5/25")
     } else {
         emptyList()
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////
-
-
-
+    }*/
     Box(
         modifier = Modifier
             .fillMaxSize()

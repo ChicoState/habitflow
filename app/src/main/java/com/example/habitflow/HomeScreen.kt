@@ -1,11 +1,10 @@
 package com.example.habitflow
 
+import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
 import androidx.compose.foundation.Image
-
-import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
@@ -65,46 +63,23 @@ import androidx.navigation.NavController
 import com.example.habitflow.repository.HabitRepository
 import com.example.habitflow.viewmodel.HomeViewModel
 import com.example.habitflow.viewmodel.HomeViewModelFactory
-import com.github.mikephil.charting.data.Entry
 import com.google.firebase.auth.FirebaseAuth
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import kotlin.collections.setOf
-import androidx.compose.ui.unit.dp
 import com.example.habitflow.model.Habit
 import com.example.habitflow.model.UserData
 import com.example.habitflow.repository.DataRepository
 import com.example.habitflow.viewmodel.AddDataViewModel
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.habitflow.viewmodel.HabitCardViewModel
 import kotlin.math.roundToInt
 
-
-
-
-
-
-
-
-
+@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController, isDeleting: String) {
@@ -118,7 +93,6 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
             auth = FirebaseAuth.getInstance()
         )
     )
-    //val addDataViewModel: AddDataViewModel = viewModel()
 
     val habitsMap by homeViewModel.habits.collectAsState()
 
@@ -135,9 +109,9 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
             contentDescription = "HabitFlow Logo Background",
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 140.dp) // leave space for bottom nav
+                .padding(bottom = 140.dp)
                 .align(Alignment.Center),
-            alpha = 0.2f, // subtle opacity
+            alpha = 0.2f,
             contentScale = ContentScale.Fit
         )
         Column(modifier = Modifier.fillMaxSize()) {
@@ -188,7 +162,8 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
                 items(habitsMap.entries.toList(), key = { it.key.id }) { (habit, userData) ->
                     HabitItem(
                         habit = habit,
-                        userData2 = userData,
+                        userData = userData,
+                        homeViewModel = homeViewModel,
                         dataViewModel = addDataViewModel,
                         navController = navController,
                         isDeleting = isDeleting,
@@ -320,12 +295,12 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
 
                         Button(
                             onClick = {
-                                /*if (selectedHabits.value.isNotEmpty()) {
+                                if (selectedHabits.value.isNotEmpty()) {
                                     homeViewModel.deleteHabits(selectedHabits.value) {
                                         selectedHabits.value.clear()
                                         navController.navigate("home/false")
                                     }
-                                }*/
+                                }
                             },
                             modifier = Modifier
                                 .width(buttonWidth)
@@ -345,193 +320,34 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
     }
 }
 
-fun countMatchingFromEnd(list1: List<Entry>, list2: List<Entry>): Int {
-    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
-    var count = 0
-
-    for (i in 1..minSize) { // Loop from end to start
-        if (list1[list1.size - i].y <= list2[list2.size - i].y) {
-            count++
-        } else {
-            break // Stop counting when a mismatch occurs
-        }
-    }
-
-    return count
-}
-
-fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
-    // Find the minimum size to avoid IndexOutOfBoundsException
-    val minSize = minOf(list1.size, list2.size)
-    var count = 0
-
-    for (i in 0 until minSize) { // Loop through both lists
-        if (list1[i].y > list2[i].y) { // Compare the y values
-            count++
-        }
-    }
-
-    return count
-}
-
-fun countDaysWithSmallerY(list1: List<Entry>, list2: List<Entry>): Int {
-    // Find the minimum size to avoid IndexOutOfBoundsException
-    val minSize = minOf(list1.size, list2.size)
-    var count = 0
-
-    for (i in 0 until minSize) { // Loop through both lists
-        if (list1[i].y < list2[i].y) { // Compare the y values for smaller values
-            count++
-        }
-    }
-
-    return count
-}
-
-fun countMatchingFromEndBad(list1: List<Entry>, list2: List<Entry>): Int {
-    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
-    var count = 0
-
-    for (i in 1..minSize) { // Loop from end to start
-        if (list1[list1.size - i].y <= list2[list1.size - i].y) {
-            count++
-        } else {
-            break // Stop counting when a mismatch occurs
-        }
-    }
-
-    return count
-}
-
-fun countMatchingFromEndGood(list1: List<Entry>, list2: List<Entry>): Int {
-    val minSize = minOf(list1.size, list2.size) // Find the smaller list size
-    var count = 0
-
-    for (i in 1..minSize) { // Loop from end to start
-        if (list1[list1.size - i].y >= list2[list1.size - i].y) {
-            count++
-        } else {
-            break // Stop counting when a mismatch occurs
-        }
-    }
-
-    return count
-}
-
-fun convertToDates(entries: List<Entry>, startDate: String): List<String> {
-    // Define the SimpleDateFormat to parse the startDate and format the resulting date
-    val sdf = SimpleDateFormat("d/M/yy", Locale.US)
-
-    // Parse the startDate to a Date object
-    val baseDate = sdf.parse(startDate)
-
-    // Convert each entry's x (which represents the number of days offset from startDate) to a date
-    val calendar = Calendar.getInstance()
-    calendar.time = baseDate ?: Date() /* Use default date if null */
-
-    return entries.map { entry ->
-        // Add the x value (days) to the calendar
-        calendar.add(Calendar.DAY_OF_MONTH, entry.x.toInt())
-
-        // Return the new date formatted as a string
-        sdf.format(calendar.time)
-    }
-}
-private fun isFirstYGreaterThanLast(list: List<Entry>): Boolean {
-    if (list.isNotEmpty()) {
-        val firstY = list.first().y
-        val lastY = list.last().y
-        return firstY > lastY
-    }
-    return false
-}
-
-fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
-    val resultList = mutableListOf<Entry>()
-
-    // Iterate through the indices of both lists
-    for (i in list1.indices) {
-        // Ensure both lists have the same index length and valid entry
-        if (i < list2.size) {
-            val entry1 = list1[i]
-            val entry2 = list2[i]
-
-            // Check if the y components are equal for the same x index
-            if (entry1.y == entry2.y) {
-                resultList.add(entry1) // Add the entry from list1 (or list2, they have the same y value)
-            }
-        }
-    }
-
-    return resultList
-}
-
 @Composable
-fun HabitItem(habit: Habit, userData2: UserData?, dataViewModel: AddDataViewModel, navController: NavController, isDeleting: String, isSelected: Boolean, onSelect: (Boolean) -> Unit) {
-    val habitName = habit.name
-    val userDataId = habit.userDataId
-    val habitType = habit.type
-    val backgroundColor = habit.backgroundColor
-    val totalDays = habit.totalDays
+fun HabitItem(
+    habit: Habit,
+    userData: UserData?,
+    homeViewModel: HomeViewModel,
+    dataViewModel: AddDataViewModel,
+    navController: NavController,
+    isDeleting: String,
+    isSelected: Boolean,
+    onSelect: (Boolean) -> Unit) {
 
     val context = LocalContext.current
+    val habitCardViewModel = remember { HabitCardViewModel(habit, userData) }
 
-    val swipeOffset = remember { mutableStateOf(0f) }
-    val maxSwipe = 200f
-    val showDeleteIcon = remember { mutableStateOf(false) }
+    var swipeOffset = habitCardViewModel.swipeOffset.value
+    var showDeleteIcon = habitCardViewModel.showDeleteIcon.value
 
     var isDeleted by remember { mutableStateOf(false) }
     if (isDeleted) return // Don't show if deleted
-
-    val userData = if (habitType == "good") listOf(
-        DataLists.goodWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
-        DataLists.goodMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
-        DataLists.goodOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
-    ) else listOf(
-        DataLists.badWeeklyData.ifEmpty { listOf(Entry(0f, 0f)) },
-        DataLists.badMonthlyData.ifEmpty { listOf(Entry(0f, 0f)) },
-        DataLists.badOverallData.ifEmpty { listOf(Entry(0f, 0f)) }
-    )
-
-    val comparisonData = if (habitType == "good") listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) else listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3)
-    val progress = if (userData[2].isNotEmpty()) {
-        ((userData[2].last().x) / comparisonData[2].size * 100).toInt()
-    } else 0
-
-    val streak = (countMatchingFromEnd(userData[0], comparisonData[0])).toString()
-
-    var arrowColor = Color.Red
-    var upOrDown = "nan"
-    if (isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
-        upOrDown = "↘"; arrowColor = Color(0xFF006400)
-    } else if (isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
-        upOrDown = "↘"; arrowColor = Color.Red
-    } else {
-        if (!isFirstYGreaterThanLast(userData[2]) && habitType != "good") {
-            upOrDown = "↗"; arrowColor = Color.Red
-        } else if (!isFirstYGreaterThanLast(userData[2]) && habitType == "good") {
-            upOrDown = "↗"; arrowColor = Color(0xFF006400)
-        }
-    }
     var isPressed by remember { mutableStateOf(isSelected) }
     val isDarkTheme = isSystemInDarkTheme()
 
+    val backgroundColor = habit.backgroundColor
+    val notificationIcon = habitCardViewModel.getNotificationIcon()
     val pressedBackgroundColor = if (isDeleting == "true" && isPressed) {
         if (isDarkTheme) Color(0xFF1E88E5).copy(alpha = 0.3f) else Color(0xFF90CAF9).copy(alpha = 0.5f)
     } else {
         backgroundColor.copy(alpha = 0.4f)
-    }
-
-    val borderColor = if (isDeleting == "true" && isPressed) {
-        if (isDarkTheme) Color(0xFF42A5F5) else Color(0xFF1E88E5)
-    } else {
-        Color.Transparent
-    }
-    // Add the checkmark or plus icon here
-    val notificationIcon = when (habit.notificationTriggered) {
-        true -> Icons.Default.Add // Plus sign icon for triggered
-        false -> Icons.Default.Check // Checkmark icon for not triggered
-        null -> Icons.Default.Check // Or any neutral icon for null, can also be left out if not needed
     }
 
     Box(
@@ -540,21 +356,18 @@ fun HabitItem(habit: Habit, userData2: UserData?, dataViewModel: AddDataViewMode
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragEnd = {
-                        if (swipeOffset.value > maxSwipe * 0.5f) {
-                            showDeleteIcon.value = true
-                        } else {
-                            swipeOffset.value = 0f
-                            showDeleteIcon.value = false
+                        habitCardViewModel.handleHorizontalDrag(dragAmount = 0f) {
                         }
                     },
                     onHorizontalDrag = { _, dragAmount ->
-                        swipeOffset.value = (swipeOffset.value + dragAmount).coerceIn(0f, maxSwipe)
+                        habitCardViewModel.handleHorizontalDrag(dragAmount = dragAmount) {
+                        }
                     }
                 )
             }
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        if (showDeleteIcon.value) {
+        if (showDeleteIcon) {
             Row(
                 modifier = Modifier
                     .matchParentSize()
@@ -562,28 +375,25 @@ fun HabitItem(habit: Habit, userData2: UserData?, dataViewModel: AddDataViewMode
                     .padding(start = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        /*homeViewModel.deleteHabits(setOf(habit.id)) {
-                        navController.navigate("home/false")
-                        Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
+                DeleteButton(
+                    habit = habit,
+                    homeViewModel = homeViewModel,
+                    navController = navController,
+                    context = context,
+                    onDeleted = {
                         isDeleted = true
-                        }*/
                     }
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
-                }
+                )
             }
         }
-
         Card(
             modifier = Modifier
-                .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                .offset { IntOffset(swipeOffset.roundToInt(), 0) }
                 .fillMaxWidth()
                 .clickable {
-                    if (showDeleteIcon.value) {
-                        swipeOffset.value = 0f
-                        showDeleteIcon.value = false
+                    if (showDeleteIcon) {
+                        swipeOffset = 0f
+                        showDeleteIcon = false
                     } else {
                         isPressed = !isPressed
                         if (isDeleting != "true") {
@@ -599,7 +409,10 @@ fun HabitItem(habit: Habit, userData2: UserData?, dataViewModel: AddDataViewMode
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = pressedBackgroundColor.copy(alpha = 0.4f), shape = RoundedCornerShape(20.dp))
+                    .background(
+                        color = pressedBackgroundColor.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
                     .padding(4.dp)
             ) {
                 Row(
@@ -608,58 +421,20 @@ fun HabitItem(habit: Habit, userData2: UserData?, dataViewModel: AddDataViewMode
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                    ) {
-                        Text(
-                            text = habitName,
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Text(
-                            text = buildAnnotatedString {
-                                append("$progress% ")
-                                append("Complete")
-                            },
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    Column(
-                    ) {
-                        Text(
-                            text = "$streak Day",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            text = "Streak 🔥",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                    Column(
-                    ) {
-                        Text(
-                            text = buildAnnotatedString {
-                                pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
-                                append(upOrDown)
-                                pop()
-                            }
-                        )
-                    }
-                        if (!userDataId.isNullOrEmpty()) {
-                            UserDataDisplay(userData2)
-                        }
-                        else {
-                            Text("Loading or No Data")
-                        }
+                    MainTitleDisplay(habit.name, habitCardViewModel)
+                    StreakDisplay(userData)
+                    ArrowDirectionDisplay(habitCardViewModel)
                 }
             }
         }
-        // IconButton in the upper-right corner for each habit
+        // IconButton in the upper right corner
         IconButton(
             onClick = {
                 dataViewModel.setHabit(habit)
                 navController.navigate("addData")
             },
             modifier = Modifier
-                .align(Alignment.TopEnd) // Align to top-right of the card
+                .align(Alignment.TopEnd)
                 .padding(2.dp)
         ) {
             Icon(notificationIcon, contentDescription = "Notification Icon")
@@ -668,15 +443,71 @@ fun HabitItem(habit: Habit, userData2: UserData?, dataViewModel: AddDataViewMode
 }
 
 @Composable
-fun UserDataDisplay(userData: UserData?) {
-    if (userData == null || userData.userData.isNullOrEmpty()) {
-        Text("No Data Available")
-    } else {
-        Column {
-            userData.userData.forEach { entry ->
-                Text(text = "x: ${entry.x}, y: ${entry.y}")
-            }
-        }
+fun MainTitleDisplay(habitName: String, viewModel: HabitCardViewModel) {
+    val progressPercentage = viewModel.calculateDeadlineRatio()
+    Column {
+        Text(
+            text = habitName,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+        )
+        Text(
+            text = progressPercentage?.let {
+                "${it}% Complete!"
+            } ?: "0% Complete",
+            style = MaterialTheme.typography.titleMedium
+        )
     }
 }
+
+@Composable
+fun StreakDisplay(userData: UserData?) {
+    val streak = userData?.streak ?: 0
+    Column {
+        Text(
+            text = "$streak Day${if (streak != 1) "s" else ""}",
+            style = MaterialTheme.typography.titleLarge
+        )
+        Text(
+            text = "Streak 🔥",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Composable
+fun ArrowDirectionDisplay(viewModel: HabitCardViewModel) {
+    val (upOrDown, arrowColor) = viewModel.getArrowAndColor()
+    Column {
+        Text(
+            text = buildAnnotatedString {
+                pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
+                append(upOrDown)
+                pop()
+            }
+        )
+    }
+}
+
+@Composable
+fun DeleteButton(
+    habit: Habit,
+    homeViewModel: HomeViewModel,
+    navController: NavController,
+    context: Context,
+    onDeleted: () -> Unit
+) {
+    IconButton(
+        onClick = {
+            homeViewModel.deleteHabits(setOf(habit.id)) {
+                navController.navigate("home/false")
+                Toast.makeText(context, "Habit deleted", Toast.LENGTH_SHORT).show()
+                onDeleted()
+            }
+        }
+    ) {
+        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+    }
+}
+
+
 

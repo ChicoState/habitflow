@@ -23,6 +23,5 @@ data class NewHabit(
 	var notificationTriggered: Boolean? = true,
 	var createDate: Timestamp = Timestamp.now(),
 	var userDataId: String = ""
-	//val userDataId: String,  // The user ID who created the habit
 
 )
