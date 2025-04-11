@@ -399,7 +399,7 @@ fun DeadlineSelector(
 ) {
     val months = (1..12).map { it.toString().padStart(2, '0') }
     val days = (1..31).map { it.toString().padStart(2, '0') }
-    val years = (2024..2040).map { it.toString() }
+    val years = (2025..2040).map { it.toString() }
 
 
     val calendar = Calendar.getInstance()
@@ -497,7 +497,7 @@ fun DropdownField(
             },
             modifier = Modifier
                 .menuAnchor()
-                .width(125.dp),
+                .width(115.dp),
             singleLine = true,
             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, lineHeight = 18.sp),
         )
