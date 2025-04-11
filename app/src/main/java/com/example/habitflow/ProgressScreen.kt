@@ -39,23 +39,27 @@ import com.example.habitflow.viewmodel.ProgressViewModel
 fun ProgressScreen(
     navController: NavController,
     habitId: String,
+    userDataId: String,
     span: String,
     sharedPreferences: SharedPreferences
 ) {
 
     val viewModel: ProgressViewModel = viewModel()
     val habitState by viewModel.habit.collectAsState()
+    val dataState by viewModel.userData.collectAsState()
     val habitName = habitState?.name ?: ""
-    val habitType = habitState?.type ?: ""
+    val type = dataState?.type ?: ""
+
 
     LaunchedEffect(habitId) {
         viewModel.loadHabit(habitId)
+        viewModel.loadUserData(userDataId)
     }
 
-    val userDataList = if (habitType== "good" )
+    val userDataList = if (type== "good" )
     { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
     else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
-    val comparisonDataList = if (habitType == "good" )
+    val comparisonDataList = if (type == "good" )
     { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
     else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
 
@@ -85,7 +89,7 @@ fun ProgressScreen(
     val streak = if (
         userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
     ) {
-        if (habitType == "good") {
+        if (type == "good") {
             viewModel.countMatchingFromEndGood(userDataList[2], comparisonDataList[2])
         } else {
             viewModel.countMatchingFromEndBad(userDataList[2], comparisonDataList[2])
@@ -95,7 +99,7 @@ fun ProgressScreen(
     val larger = if (
         userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
     ) {
-        if (habitType == "good") {
+        if (type == "good") {
             viewModel.countDaysWithLargerY(userDataList[2], comparisonDataList[2])
         } else {
             viewModel.countDaysWithSmallerY(userDataList[2], comparisonDataList[2])

@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.habitflow.model.NewHabit
+import com.example.habitflow.repository.DataRepository
+import com.example.habitflow.repository.HabitRepository
 import com.example.habitflow.repository.generateGoalDataForFirestore
 
 
@@ -32,7 +34,6 @@ class AddHabitViewModel : ViewModel() {
 	var category by mutableStateOf("General")
 	private var frequency by mutableStateOf("")
 	var deadline by mutableStateOf("")
-	private var startDate by mutableStateOf("")
 	var customReminderValue by mutableStateOf("")
 	var customReminderUnit by mutableStateOf("Days")
 	var showDescriptionField by mutableStateOf(false)
@@ -44,53 +45,58 @@ class AddHabitViewModel : ViewModel() {
 		tenths = value == "tenths"
 		hundredths = value == "hundredths"
 	}
-	// Derived property for goal data:
 	private val goalData: List<Map<String, Any>>
 		get() = generateGoalDataForFirestore(duration, endAmount, precision)
 
 	fun saveHabitToFirestore(context: Context, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
 		val user = FirebaseAuth.getInstance().currentUser ?: return onFailure("No user found")
 
-		// Use the derived goalData instead of recalculating here:
-		val newHabit = NewHabit(
-			name = habitName,
-			description = habitDescription,
-			type = if (isGoodHabit) "good" else "bad",
-			duration = duration,
-			goalAmount = endAmount,
-			precision = precision,
-			goalData = goalData,
-			remindersEnabled = reminders,
-			reminderFrequency = when {
-				hourly -> "hourly"
-				daily -> "daily"
-				weekly -> "weekly"
-				custom -> "custom"
-				else -> null
-			},
-			trackingMethod = when (trackingMethodLabel) {
-				"Yes/No" -> "binary"
-				"Count/Quantity" -> "numeric"
-				"Time Spent" -> "timeBased"
-				else -> "binary"
-			},
-			category = category,
-			frequency = frequency,
-			deadline = if (deadline.isNotBlank()) deadline else null,
-			startDate = if (startDate.isNotBlank()) startDate else null,
-			customReminderValue = customReminderValue.takeIf { it.isNotBlank() },
-			customReminderUnit = customReminderUnit.takeIf { it.isNotBlank() },
-			userDataId = ""
-		)
+		val userDataRepository = DataRepository()
+		val habitRepository = HabitRepository
 
+		val trackingMethod = when (trackingMethodLabel) {
+			"Yes/No" -> "binary"
+			"Count/Quantity" -> "numeric"
+			"Time Spent" -> "timeBased"
+			else -> "binary"
+		}
+		val newDeadline = deadline.ifBlank { null }
 
-		// Pass newHabit to your repository method
-		com.example.habitflow.repository.HabitRepository.createHabitForUser(
-			context = context,
-			user = user,
-			habit = newHabit,
-			onSuccess = onSuccess,
-			onFailure = onFailure,
+		userDataRepository.createEmptyUserData(isGoodHabit, newDeadline, trackingMethod, onSuccess = { userDataId ->
+			val newHabit = NewHabit(
+				name = habitName,
+				description = habitDescription,
+				duration = duration,
+				goalAmount = endAmount,
+				precision = precision,
+				goalData = goalData,
+				remindersEnabled = reminders,
+				reminderFrequency = when {
+					hourly -> "hourly"
+					daily -> "daily"
+					weekly -> "weekly"
+					custom -> "custom"
+					else -> null
+				},
+				category = category,
+				frequency = frequency,
+				customReminderValue = customReminderValue.takeIf { it.isNotBlank() },
+				customReminderUnit = customReminderUnit.takeIf { it.isNotBlank() },
+				userDataId = userDataId,
+				notificationTriggered = true
+			)
+
+			habitRepository.createHabitForUser(
+				context = context,
+				user = user,
+				habit = newHabit,
+				onSuccess = onSuccess,
+				onFailure = onFailure,
+			)
+		},
+			onFailure = { errorMessage ->
+				onFailure(errorMessage)
+			}
 		)
 	}
 }

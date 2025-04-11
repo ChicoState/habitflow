@@ -53,8 +53,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +67,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import kotlin.collections.setOf
@@ -323,7 +322,7 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
 @Composable
 fun HabitItem(
     habit: Habit,
-    userData: UserData?,
+    userData: UserData,
     homeViewModel: HomeViewModel,
     dataViewModel: AddDataViewModel,
     navController: NavController,
@@ -334,7 +333,7 @@ fun HabitItem(
     val context = LocalContext.current
     val habitCardViewModel = remember { HabitCardViewModel(habit, userData) }
 
-    var swipeOffset = habitCardViewModel.swipeOffset.value
+    var swipeOffset = habitCardViewModel.swipeOffset.floatValue
     var showDeleteIcon = habitCardViewModel.showDeleteIcon.value
 
     var isDeleted by remember { mutableStateOf(false) }
@@ -342,10 +341,12 @@ fun HabitItem(
     var isPressed by remember { mutableStateOf(isSelected) }
     val isDarkTheme = isSystemInDarkTheme()
 
-    val backgroundColor = habit.backgroundColor
+    val backgroundColor = userData.backgroundColor
     val notificationIcon = habitCardViewModel.getNotificationIcon()
+
     val pressedBackgroundColor = if (isDeleting == "true" && isPressed) {
-        if (isDarkTheme) Color(0xFF1E88E5).copy(alpha = 0.3f) else Color(0xFF90CAF9).copy(alpha = 0.5f)
+        if (isDarkTheme) Color(0xFF1E88E5).copy(alpha = 0.3f)
+        else Color(0xFF90CAF9).copy(alpha = 0.5f)
     } else {
         backgroundColor.copy(alpha = 0.4f)
     }
@@ -390,6 +391,7 @@ fun HabitItem(
             modifier = Modifier
                 .offset { IntOffset(swipeOffset.roundToInt(), 0) }
                 .fillMaxWidth()
+                .height(90.dp)
                 .clickable {
                     if (showDeleteIcon) {
                         swipeOffset = 0f
@@ -397,7 +399,7 @@ fun HabitItem(
                     } else {
                         isPressed = !isPressed
                         if (isDeleting != "true") {
-                            navController.navigate("progress/${habit.id}/Overall")
+                            navController.navigate("progress/${habit.id}/${habit.userDataId}/Overall")
                         } else {
                             onSelect(isPressed)
                         }
@@ -418,12 +420,22 @@ fun HabitItem(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .padding(end = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    MainTitleDisplay(habit.name, habitCardViewModel)
-                    StreakDisplay(userData)
-                    ArrowDirectionDisplay(habitCardViewModel)
+                    Box(modifier = Modifier.weight(.8f)) {
+                        MainTitleDisplay(habit, userData)
+                    }
+                    Box(modifier = Modifier
+                        .weight(0.7f)
+                        .padding(horizontal = 8.dp)
+                    ) {
+                        StreakDisplay(userData)
+                    }
+                    Box(modifier = Modifier.weight(.8f)) {
+                        ArrowDirectionDisplay(userData)
+                    }
                 }
             }
         }
@@ -431,6 +443,7 @@ fun HabitItem(
         IconButton(
             onClick = {
                 dataViewModel.setHabit(habit)
+                dataViewModel.setUserData(userData)
                 navController.navigate("addData")
             },
             modifier = Modifier
@@ -443,17 +456,16 @@ fun HabitItem(
 }
 
 @Composable
-fun MainTitleDisplay(habitName: String, viewModel: HabitCardViewModel) {
-    val progressPercentage = viewModel.calculateDeadlineRatio()
+fun MainTitleDisplay(habit: Habit, userData: UserData) {
+    val habitName = habit.name
+    val progress = userData.progressPercentage
     Column {
         Text(
             text = habitName,
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
         )
         Text(
-            text = progressPercentage?.let {
-                "${it}% Complete!"
-            } ?: "0% Complete",
+            text = "${progress}% Complete",
             style = MaterialTheme.typography.titleMedium
         )
     }
@@ -464,7 +476,7 @@ fun StreakDisplay(userData: UserData?) {
     val streak = userData?.streak ?: 0
     Column {
         Text(
-            text = "$streak Day${if (streak != 1) "s" else ""}",
+            text = "$streak Day",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
@@ -475,15 +487,21 @@ fun StreakDisplay(userData: UserData?) {
 }
 
 @Composable
-fun ArrowDirectionDisplay(viewModel: HabitCardViewModel) {
-    val (upOrDown, arrowColor) = viewModel.getArrowAndColor()
-    Column {
-        Text(
-            text = buildAnnotatedString {
-                pushStyle(SpanStyle(color = arrowColor, fontSize = 24.sp))
-                append(upOrDown)
-                pop()
-            }
+fun ArrowDirectionDisplay(userData: UserData) {
+    val trendIcon = userData.trendDrawable
+
+    Column (
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxHeight()
+    ) {
+        Image(
+            painter = painterResource(id = trendIcon),
+            contentDescription = "Trend Arrow",
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .alpha(0.5f)
         )
     }
 }

@@ -1,16 +1,10 @@
 package com.example.habitflow.repository
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.example.habitflow.repository.ReminderNotificationHelper
 
 class ReminderWorker(
 	context: Context,

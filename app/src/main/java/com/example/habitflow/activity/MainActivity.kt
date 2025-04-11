@@ -89,10 +89,11 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(addDataViewModel = addDataViewModel, navController = navController, isDeleting = isDeletingArg)
                         }
                         composable("addHabit") { AddHabitScreen(navController = navController, sharedPreferences = sharedPreferences) }
-                        composable("progress/{habitId}/{span}") { backStackEntry ->
+                        composable("progress/{habitId}/{userDataId}/{span}") { backStackEntry ->
                             val habitId = backStackEntry.arguments?.getString("habitId") ?: ""
+                            val userDataId = backStackEntry.arguments?.getString("userDataId") ?: ""
                             val span = backStackEntry.arguments?.getString("span") ?: ""
-                            ProgressScreen(navController = navController, habitId = habitId, span = span, sharedPreferences = sharedPreferences)
+                            ProgressScreen(navController = navController, habitId = habitId, userDataId = userDataId, span = span, sharedPreferences = sharedPreferences)
                         }
                         composable("settings") {
                             SettingsScreen(navController, isDarkMode, sharedPreferences)

@@ -5,14 +5,81 @@ import com.example.habitflow.model.UserData
 import com.github.mikephil.charting.data.Entry
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 
 class DataRepository {
 
-    fun loadUserDataFromFirestore(
-        userDataId: String,
-        onSuccess: (UserData) -> Unit,
+    private fun getDatabase(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    fun createEmptyUserData(
+        type: Boolean,
+        deadline: String?,
+        trackingMethod: String,
+        onSuccess: (String) -> Unit,
         onFailure: (String) -> Unit
     ) {
+        val db = getDatabase()
+
+        val userData = mapOf(
+            "data" to emptyList<Map<String, Any>>(),
+            "createDate" to Timestamp.now(),
+            "deadline" to deadline,
+            "lastUpdated" to Timestamp.now(),
+            "type" to if (type) "good" else "bad",
+            "trackingMethod" to trackingMethod
+        )
+
+        db.collection("userData")
+            .add(userData)
+            .addOnSuccessListener { documentReference ->
+                onSuccess(documentReference.id)
+            }
+            .addOnFailureListener { e ->
+                onFailure("Failed to create userData: ${e.message}")
+            }
+    }
+
+    fun updateUserData(userDataId: String, newData: Map<String, Any>, currentTimestamp: Timestamp) {
+        val db = getDatabase()
+        db.collection("userData")
+            .document(userDataId)
+            .update(
+                "data", FieldValue.arrayUnion(newData),
+                "lastUpdated", currentTimestamp
+            )
+            .addOnSuccessListener {
+                Log.d("DataRepository", "Data successfully updated")
+            }
+            .addOnFailureListener { exception ->
+                Log.e("DataRepository", "Error updating data: ${exception.message}")
+            }
+    }
+
+    fun loadUserDataFromFirestore(
+        userDataId: String,
+        onComplete: (Result<UserData>) -> Unit
+    ) {
+        val db = getDatabase()
+        val userDataRef = db.collection("userData").document(userDataId)
+
+        userDataRef.get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val data = document.data
+                    val userData = parseUserData(data, userDataId)
+                    onComplete(Result.success(userData))
+                } else {
+                    onComplete(Result.failure(Exception("User data not found")))
+                    Log.e("DataRepository", "User data not found in loadUserDataFromFirestore")
+                }
+            }
+            .addOnFailureListener { exception ->
+                onComplete(Result.failure(Exception("Error loading user data: ${exception.message}")))
+                Log.e("DataRepository", "Error loading user data loadUserDataFromFirestore")
+            }
+    }
+
+    fun updateLastEntryInFirestore(userDataId: String, updatedEntry: Entry) {
         val db = FirebaseFirestore.getInstance()
         val userDataRef = db.collection("userData").document(userDataId)
 
@@ -20,19 +87,41 @@ class DataRepository {
             .addOnSuccessListener { document ->
                 if (document.exists()) {
                     val data = document.data
-                    val userData = parseUserData(data)
-                    onSuccess(userData)
+                    val entries = (data?.get("data") as? List<*>)?.toMutableList()
+
+                    if (!entries.isNullOrEmpty()) {
+                        val lastIndex = entries.lastIndex
+
+                        // Construct new map for the updated entry
+                        val updatedEntryMap = mapOf(
+                            "timestamp" to Timestamp.now(),
+                            "value" to updatedEntry.y
+                        )
+
+                        // Replace the last entry
+                        entries[lastIndex] = updatedEntryMap
+
+                        // Update the entire data array in Firestore
+                        userDataRef.update(
+                            "data", entries,
+                            "lastUpdated", Timestamp.now()
+                        ).addOnSuccessListener {
+                            Log.d("DataRepository", "Last entry successfully updated.")
+                        }.addOnFailureListener { e ->
+                            Log.e("DataRepository", "Failed to update last entry: ${e.message}")
+                        }
+                    } else {
+                        Log.e("DataRepository", "No entries to update in document: $userDataId")
+                    }
                 } else {
-                    onFailure("User data not found")
-                    Log.e("DataRepository", "User data not found in loadUserDataFromFirestore")
+                    Log.e("DataRepository", "Document $userDataId does not exist.")
                 }
             }
-            .addOnFailureListener { exception ->
-                onFailure("Error loading user data: ${exception.message}")
-                Log.e("DataRepository", "Error loading user data loadUserDataFromFirestore")
-
+            .addOnFailureListener { e ->
+                Log.e("DataRepository", "Error fetching document: ${e.message}")
             }
     }
+
 
     fun deleteUserData(userDataId: String, onComplete: (Boolean) -> Unit) {
         if (userDataId.isBlank()) {
@@ -40,7 +129,7 @@ class DataRepository {
             return
         }
 
-        val db = FirebaseFirestore.getInstance()
+        val db = getDatabase()
         val docRef = db.collection("userData").document(userDataId)
 
         docRef.delete()
@@ -53,9 +142,7 @@ class DataRepository {
             }
     }
 
-
-    private fun parseUserData(data: Map<String, Any>?): UserData {
-        // Fetch the 'data' field which should be a list of maps
+    private fun parseUserData(data: Map<String, Any>?, userDataId: String): UserData {
         val rawEntries = (data?.get("data") as? List<*>)?.mapNotNull { item ->
             // For each item in the list, check if it is a map with a timestamp and value
             (item as? Map<*, *>)?.let { map ->
@@ -66,20 +153,19 @@ class DataRepository {
                 if (timestamp != null && value != null) {
                     Entry(timestamp.seconds.toFloat(), value)
                 } else {
-                    null // Skip invalid entries
+                    null
                 }
             }
-        } ?: emptyList() // Return empty list if data is null or not in the expected format
+        } ?: emptyList()
 
-        // Calculate the time differences for each entry
-        val entriesWithTimeDifference = calculateTimeDifferences(rawEntries)
-        val lastUpdated = data?.get("lastUpdated") as? Timestamp ?: Timestamp.now()
-
-        // Return UserData with the calculated entries and a decreasing flag
         return UserData(
-            userData = entriesWithTimeDifference,
-            decreasing = isDecreasing(entriesWithTimeDifference),
-            lastUpdated = lastUpdated
+            userDataId = userDataId,
+            userData = calculateTimeDifferences(rawEntries),
+            lastUpdated = data?.get("lastUpdated") as? Timestamp ?: Timestamp.now(),
+            createDate = data?.get("createDate") as? Timestamp ?: Timestamp.now(),
+            deadline = data?.get("deadline") as? String ?: "",
+            type = data?.get("type") as? String ?: "",
+            trackingMethod = data?.get("trackingMethod") as? String ?: ""
         )
     }
 
@@ -93,16 +179,8 @@ class DataRepository {
 
         // Map each entry to a new Entry where x is the time difference in minutes
         return entries.map { entry ->
-            val timeDifference = (entry.x - firstTimestamp) / 60 // Convert seconds to minutes
+            val timeDifference = (entry.x - firstTimestamp) / 60
             Entry(timeDifference, entry.y)
         }
-    }
-    private fun isDecreasing(list: List<Entry>): Boolean {
-        if (list.isNotEmpty()) {
-            val firstY = list.first().y
-            val lastY = list.last().y
-            return firstY > lastY
-        }
-        return false
     }
 }

@@ -1,8 +1,11 @@
 package com.example.habitflow.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habitflow.model.Habit
+import com.example.habitflow.model.UserData
+import com.example.habitflow.repository.DataRepository
 import com.example.habitflow.repository.HabitRepository
 import com.github.mikephil.charting.data.Entry
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,11 +14,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ProgressViewModel(
-	private val habitRepository: HabitRepository = HabitRepository
+	private val habitRepository: HabitRepository = HabitRepository,
+	private val dataRepository: DataRepository = DataRepository()
 ) : ViewModel() {
 
 	private val _habit = MutableStateFlow<Habit?>(null)
+	private val _userData = MutableStateFlow<UserData?>(null)
 	val habit: StateFlow<Habit?> = _habit.asStateFlow()
+	val userData: StateFlow<UserData?> = _userData.asStateFlow()
 
 	fun loadHabit(habitId: String) {
 		viewModelScope.launch {
@@ -24,6 +30,21 @@ class ProgressViewModel(
 			}
 		}
 	}
+
+	fun loadUserData(userDataId: String) {
+		viewModelScope.launch {
+			dataRepository.loadUserDataFromFirestore(userDataId) { result ->
+				result.onSuccess { fetchedData ->
+					_userData.value = fetchedData // Update the state with the fetched data
+				}
+				result.onFailure { exception ->
+					// Handle failure if needed (e.g., show error message)
+					Log.e("HomeViewModel", "Error loading user data: ${exception.message}")
+				}
+			}
+		}
+	}
+
 
 	fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
 		// Find the minimum size to avoid IndexOutOfBoundsException

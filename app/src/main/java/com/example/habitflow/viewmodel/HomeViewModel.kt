@@ -22,78 +22,101 @@ class HomeViewModel(
 	private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : AndroidViewModel(application) {
 
-	private val _habits = MutableStateFlow<Map<Habit, UserData?>>(emptyMap())
-	val habits: StateFlow<Map<Habit, UserData?>> = _habits.asStateFlow()
+	private val _habits = MutableStateFlow<Map<Habit, UserData>>(emptyMap())
+	val habits: StateFlow<Map<Habit, UserData>> = _habits.asStateFlow()
 
 	fun loadHabits() {
 		val user = auth.currentUser ?: return
 		viewModelScope.launch {
-			habitRepository.loadHabitsFromFirestore(
-				user = user,
-				onSuccess = { habitIds ->
-					val loadedHabits = mutableListOf<Habit>()
-					var remaining = habitIds.size
-					if (habitIds.isEmpty()) {
-						_habits.value = emptyMap() // Empty map if no habits
-						return@loadHabitsFromFirestore
-					}
-
-					habitIds.forEach { id ->
-						habitRepository.getHabitFromFirestore(id) { habit ->
-							habit?.let { loadedHabits.add(it) }
-							remaining--
-
-							// Once all habits are loaded, load userData for each habit
-							if (remaining == 0) {
-								val habitsWithUserData = mutableMapOf<Habit, UserData?>()
-
-								// Load user data for each habit
-								loadedHabits.forEach { hab ->
-									loadUserDataForHabit(hab) { userData ->
-										habitsWithUserData[hab] = userData
-
-										// Once all user data is loaded, sort the map
-										if (habitsWithUserData.size == loadedHabits.size) {
-											// Sort the habits based on the `createDate`
-											val sortedHabits = habitsWithUserData.entries
-												.sortedBy { it.key.createDate.toDate() }
-												.associate { it.key to it.value }
-
-											// Update the state with the sorted map
-											_habits.value = sortedHabits
-										}
-									}
-								}
-							}
-						}
-					}
-				},
-				onFailure = { _habits.value = emptyMap() }
-			)
+			fetchHabitIds(user)
 		}
 	}
 
-	// Fetch the userData for each habit and return it via a callback
-	private fun loadUserDataForHabit(habit: Habit, onComplete: (UserData?) -> Unit) {
-		viewModelScope.launch {
-			val userDataId = habit.userDataId
-			if (userDataId.isEmpty()) {
-				onComplete(null)
-			} else {
-				dataRepository.loadUserDataFromFirestore(
-					userDataId = userDataId,
-					onSuccess = { loadedUserData ->
-						onComplete(loadedUserData) // Pass userData via callback
-					},
-					onFailure = { errorMessage ->
-						Log.e("HomeViewModel", "Error loading user data for habit ${habit.id}: $errorMessage")
-						onComplete(null)
-					}
-				)
+	// Helper function to loadHabits()
+	private fun fetchHabitIds(user: FirebaseUser) {
+		habitRepository.loadHabitsFromFirestore(
+			user = user,
+			onSuccess = { habitIds ->
+				if (habitIds.isEmpty()) {
+					_habits.value = emptyMap()
+					return@loadHabitsFromFirestore
+				}
+				loadHabitsByIds(habitIds)
+			},
+			onFailure = { _habits.value = emptyMap() }
+		)
+	}
+
+	// Helper function to fetchHabitIds()
+	private fun loadHabitsByIds(habitIds: List<String>) {
+		val loadedHabits = mutableListOf<Habit>()
+		var remaining = habitIds.size
+
+		habitIds.forEach { id ->
+			habitRepository.getHabitFromFirestore(id) { habit ->
+				habit?.let { loadedHabits.add(it) }
+				remaining--
+
+				if (remaining == 0) {
+					loadUserDataForHabits(loadedHabits)
+				}
 			}
 		}
 	}
 
+	// Helper function to loafHabitsByIds()
+	private fun loadUserDataForHabits(habits: List<Habit>) {
+		val habitsWithUserData = mutableListOf<Pair<Habit, UserData>>()
+
+		habits.forEach { habit ->
+			loadUserDataForHabit(habit) { result ->
+				result.onSuccess { userData ->
+					habitsWithUserData.add(habit to userData)
+				}
+				result.onFailure { error ->
+					Log.e("HomeViewModel", "Error loading user data for habit ${habit.id}: $error")
+				}
+
+				if (habitsWithUserData.size == habits.size) {
+					commitSortedHabits(habitsWithUserData)
+				}
+			}
+		}
+	}
+
+	// Helper function to loadUserDataForHabits()
+	private fun commitSortedHabits(habitsWithUserData: List<Pair<Habit, UserData>>) {
+		val sorted = habitsWithUserData
+			.sortedBy { it.second.createDate.toDate() }
+			.associate { it.first to it.second }
+
+		_habits.value = sorted
+	}
+
+	// Helper function to load userDataForHabits()
+	private fun loadUserDataForHabit(habit: Habit, onComplete: (Result<UserData>) -> Unit) {
+		viewModelScope.launch {
+			// Load user data from Firestore using the userDataId of the habit
+			val userDataId = habit.userDataId
+
+			// Attempt to load user data
+			dataRepository.loadUserDataFromFirestore(
+				userDataId = userDataId,
+				onComplete = { result ->
+					result.onSuccess { loadedUserData ->
+						// Pass the loaded userData via the callback
+						onComplete(Result.success(loadedUserData))
+					}
+					result.onFailure { error ->
+						Log.e("HomeViewModel", "Error loading user data for habit ${habit.id}: ${error.message}")
+						onComplete(Result.failure(error))
+					}
+				}
+			)
+		}
+	}
+
+	// Helper function to loadUserDataForHabit()
 	fun moveToPastHabits(habitIds: Set<String>, onComplete: () -> Unit) {
 		onComplete()
 	}
@@ -115,23 +138,20 @@ class HomeViewModel(
 			val totalToDelete = userDataIds.size
 
 			userDataIds.forEach { userDataId ->
-				// Call deleteUserData for each userDataId
 				dataRepository.deleteUserData(userDataId) { _ ->
 					completedCount++
 
 					if (completedCount == totalToDelete) {
-						// delete habits
 						proceedToDeleteHabits(habitIds, user, onComplete)
 					}
 				}
 			}
 		} else {
-			// No userDataIds to delete, proceed directly with habit deletion
 			proceedToDeleteHabits(habitIds, user, onComplete)
 		}
 	}
 
-	// Helper function to delete habits and update local state
+	// Helper function to deleteHabits()
 	private fun proceedToDeleteHabits(
 		habitIds: Set<String>,
 		user: FirebaseUser,
@@ -142,13 +162,9 @@ class HomeViewModel(
 			user = user,
 			habitIds = habitIds,
 			onComplete = {
-				// Remove the deleted habits from the _habits map
 				_habits.value = _habits.value.filterKeys { habit -> !habitIds.contains(habit.id) }
 				onComplete()
 			}
 		)
 	}
-
-
-
 }
