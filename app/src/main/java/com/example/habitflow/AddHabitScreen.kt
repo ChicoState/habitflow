@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habitflow.viewmodel.AddHabitViewModel
+import java.util.Calendar
+
 
 @Composable
 fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPreferences) {
@@ -35,7 +37,7 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text = "Add a Habit",
@@ -56,7 +58,7 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -397,18 +399,34 @@ fun DeadlineSelector(
 ) {
     val months = (1..12).map { it.toString().padStart(2, '0') }
     val days = (1..31).map { it.toString().padStart(2, '0') }
-    val years = (2024..2030).map { it.toString() }
+    val years = (2024..2040).map { it.toString() }
+
+
+    val calendar = Calendar.getInstance()
+    val todayMonth = (calendar.get(Calendar.MONTH) + 1).toString().padStart(2, '0')
+    val todayDay = calendar.get(Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+    val todayYear = calendar.get(Calendar.YEAR).toString()
 
     var showDatePicker by remember { mutableStateOf(false) }
 
     // State for dropdowns
-    var selectedMonth by remember { mutableStateOf("01") }
-
+    var selectedMonth by remember {
+        mutableStateOf(
+            currentDeadline.takeIf { it.contains("/") }?.split("/")?.getOrNull(0)
+                ?: todayMonth
+        )
+    }
     var selectedDay by remember {
-        mutableStateOf(currentDeadline.split("/").getOrNull(1) ?: "01")
+        mutableStateOf(
+            currentDeadline.takeIf { it.contains("/") }?.split("/")?.getOrNull(1)
+                ?: todayDay
+        )
     }
     var selectedYear by remember {
-        mutableStateOf(currentDeadline.split("/").getOrNull(2) ?: "2024")
+        mutableStateOf(
+            currentDeadline.takeIf { it.contains("/") }?.split("/")?.getOrNull(2)
+                ?: todayYear
+        )
     }
 
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
@@ -453,6 +471,7 @@ fun DeadlineSelector(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropdownField(
     label: String,
@@ -462,37 +481,28 @@ fun DropdownField(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
         modifier = Modifier
-            .widthIn(min = 100.dp, max = 120.dp)
             .padding(horizontal = 4.dp)
     ) {
         OutlinedTextField(
             value = selected,
             onValueChange = {},
-            label = {
-                Text(
-                    text = label,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Clip
-                )
-            },
             readOnly = true,
+            label = { Text(label) },
             trailingIcon = {
-                IconButton(onClick = { expanded = true }) {
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
-                }
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
             },
+            modifier = Modifier
+                .menuAnchor()
+                .width(125.dp),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            textStyle = LocalTextStyle.current.copy(
-                fontSize = 14.sp,
-                lineHeight = 18.sp
-            )
+            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, lineHeight = 18.sp),
         )
 
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
@@ -508,6 +518,7 @@ fun DropdownField(
         }
     }
 }
+
 
 
 @Composable
