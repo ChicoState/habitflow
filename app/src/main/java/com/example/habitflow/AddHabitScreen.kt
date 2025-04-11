@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habitflow.viewmodel.AddHabitViewModel
 
@@ -394,44 +395,120 @@ fun DeadlineSelector(
     currentDeadline: String,
     onDeadlineChange: (String) -> Unit
 ) {
-    // For simplicity, let’s use a toggle: if the user clicks “Set End Date,” show a date picker (or a text field for now)
+    val months = (1..12).map { it.toString().padStart(2, '0') }
+    val days = (1..31).map { it.toString().padStart(2, '0') }
+    val years = (2024..2030).map { it.toString() }
+
     var showDatePicker by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("Deadline:")
-        Spacer(modifier = Modifier.width(8.dp))
-        Button(onClick = { showDatePicker = true }) {
-            Text(if (currentDeadline.isNotBlank()) currentDeadline else "Set End Date")
-        }
+    // State for dropdowns
+    var selectedMonth by remember { mutableStateOf("01") }
+
+    var selectedDay by remember {
+        mutableStateOf(currentDeadline.split("/").getOrNull(1) ?: "01")
+    }
+    var selectedYear by remember {
+        mutableStateOf(currentDeadline.split("/").getOrNull(2) ?: "2024")
     }
 
-    if (showDatePicker) {
-        // Replace this with your actual date picker implementation.
-        // For now, we use a simple text field for demonstration.
-        OutlinedTextField(
-            value = currentDeadline,
-            onValueChange = {
-                onDeadlineChange(it)
-            },
-            label = { Text("Enter End Date (YYYY-MM-DD)") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-        )
-        // Optionally add a button to dismiss the picker.
-        Button(
-            onClick = { showDatePicker = false },
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
-        ) {
-            Text("Done")
+    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+        Text("Deadline", style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = { showDatePicker = !showDatePicker }) {
+            Text(
+                if (showDatePicker)
+                    "Hide End Date Picker"
+                else if (currentDeadline.isNotBlank())
+                    "End Date: $currentDeadline"
+                else
+                    "Set End Date"
+            )
+        }
+
+        if (showDatePicker) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                DropdownField("Month", months, selectedMonth) { selectedMonth = it }
+                DropdownField("Day", days, selectedDay) { selectedDay = it }
+                DropdownField("Year", years, selectedYear) { selectedYear = it }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    val deadline = "$selectedMonth/$selectedDay/$selectedYear"
+                    onDeadlineChange(deadline)
+                    showDatePicker = false
+                },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Done")
+            }
         }
     }
 }
+
+@Composable
+fun DropdownField(
+    label: String,
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .widthIn(min = 100.dp, max = 120.dp)
+            .padding(horizontal = 4.dp)
+    ) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            label = {
+                Text(
+                    text = label,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip
+                )
+            },
+            readOnly = true,
+            trailingIcon = {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                }
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 14.sp,
+                lineHeight = 18.sp
+            )
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option, fontSize = 14.sp) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun ReminderFrequencyOption(
