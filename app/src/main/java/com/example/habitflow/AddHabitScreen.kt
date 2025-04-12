@@ -497,14 +497,15 @@ fun DropdownField(
             },
             modifier = Modifier
                 .menuAnchor()
-                .width(125.dp),
+                .width(115.dp),
             singleLine = true,
             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, lineHeight = 18.sp),
         )
 
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 150.dp)
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
