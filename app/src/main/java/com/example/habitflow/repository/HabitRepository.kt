@@ -2,8 +2,8 @@ package com.example.habitflow.repository
 
 import android.content.Context
 import androidx.work.*
-import com.example.habitflow.GoalPoint
-import com.example.habitflow.Habit
+import com.example.habitflow.model.GoalPoint
+import com.example.habitflow.model.Habit
 import com.example.habitflow.model.NewHabit
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
@@ -60,9 +60,8 @@ object HabitRepository {
 					id = document.id,
 					name = data["name"] as? String ?: "",
 					description = data["description"] as? String ?: "",
-					type = data["type"] as? String ?: "",
 					duration = (data["duration"] as? Number)?.toInt() ?: 0,
-					goalAmount = (data["goalAmount"] as? Number)?.toInt() ?: 0,
+					goalAmount = (data["goalAmount"] as? Number)?.toFloat() ?: 0f,
 					units = data["units"] as? String ?: "",
 					precision = data["precision"] as? String ?: "",
 					goalData = (data["goalData"] as? List<*>
@@ -73,6 +72,8 @@ object HabitRepository {
 							if (x != null && y != null) GoalPoint(x, y) else null
 						}
 					},
+					userDataId = data["userDataId"] as? String ?: "",
+					notificationTriggered = data["notificationTriggered"] as? Boolean ?: false,
 				)
 
 				onComplete(habit)
@@ -92,7 +93,6 @@ object HabitRepository {
 		val habitData = hashMapOf(
 			"name" to habit.name,
 			"description" to habit.description,
-			"type" to habit.type,
 			"duration" to habit.duration,
 			"goalAmount" to habit.goalAmount,
 			"goalData" to habit.goalData,
@@ -100,12 +100,11 @@ object HabitRepository {
 			"remindersEnabled" to habit.remindersEnabled,
 			"reminderFrequency" to habit.reminderFrequency,
 			"category" to habit.category,
-			"trackingMethod" to habit.trackingMethod,
 			"frequency" to habit.frequency,
-			"deadline" to habit.deadline,
-			"startDate" to habit.startDate,
 			"customReminderValue" to habit.customReminderValue,
 			"customReminderUnit" to habit.customReminderUnit,
+			"userDataId" to habit.userDataId,
+			"notificaitonTriggered" to habit.notificationTriggered
 		)
 
 		db.collection("habits").add(habitData).addOnSuccessListener { docRef ->
@@ -191,3 +190,4 @@ object HabitRepository {
 		)
 	}
 }
+

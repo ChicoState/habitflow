@@ -1,4 +1,4 @@
-package com.example.habitflow
+package com.example.habitflow.activity
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -18,13 +18,21 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import kotlin.math.roundToInt
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.habitflow.AddDataScreen
+import com.example.habitflow.AddHabitScreen
+import com.example.habitflow.HomeScreen
+import com.example.habitflow.LoginScreen
+import com.example.habitflow.ProfileSetupScreen
+import com.example.habitflow.ProgressScreen
+import com.example.habitflow.SettingsScreen
+import com.example.habitflow.SignUpScreen
+import com.example.habitflow.viewmodel.AddDataViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -49,13 +57,13 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
 
-        // ✅ Initialize Firebase Auth and Firestore
+        // Initialize Firebase Auth and Firestore
         auth = Firebase.auth
         db = FirebaseFirestore.getInstance()
-        sharedPreferences = getSharedPreferences("habitflow_prefs", Context.MODE_PRIVATE) // ✅ Load SharedPreferences
+        sharedPreferences = getSharedPreferences("habitflow_prefs", Context.MODE_PRIVATE)
 
         setContent {
-            val isDarkMode = remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) } // ✅ Get stored value
+            val isDarkMode = remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) }
 
             HabitflowTheme(darkTheme = isDarkMode.value) {  // ✅ Pass darkMode state
                 Surface(
@@ -64,6 +72,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     val currentUser = remember { auth.currentUser }
+                    val addDataViewModel: AddDataViewModel = viewModel()
 
                     NavHost(
                         navController,
@@ -77,16 +86,20 @@ class MainActivity : ComponentActivity() {
                         // ✅ Main App Screens
                         composable("home/{isDeleting}") { backStackEntry ->
                             val isDeletingArg = backStackEntry.arguments?.getString("isDeleting") ?: "false"
-                            HomeScreen(navController = navController, isDeleting = isDeletingArg)
+                            HomeScreen(addDataViewModel = addDataViewModel, navController = navController, isDeleting = isDeletingArg)
                         }
                         composable("addHabit") { AddHabitScreen(navController = navController, sharedPreferences = sharedPreferences) }
-                        composable("progress/{habitId}/{span}") { backStackEntry ->
+                        composable("progress/{habitId}/{userDataId}/{span}") { backStackEntry ->
                             val habitId = backStackEntry.arguments?.getString("habitId") ?: ""
+                            val userDataId = backStackEntry.arguments?.getString("userDataId") ?: ""
                             val span = backStackEntry.arguments?.getString("span") ?: ""
-                            ProgressScreen(navController = navController, habitId = habitId, span = span, sharedPreferences = sharedPreferences)
+                            ProgressScreen(navController = navController, habitId = habitId, userDataId = userDataId, span = span, sharedPreferences = sharedPreferences)
                         }
                         composable("settings") {
-                            SettingsScreen(navController, isDarkMode, sharedPreferences) // ✅ Pass darkMode state and SharedPreferences
+                            SettingsScreen(navController, isDarkMode, sharedPreferences)
+                        }
+                        composable("addData") {
+                            AddDataScreen(viewModel = addDataViewModel, navController = navController)
                         }
                     }
                 }

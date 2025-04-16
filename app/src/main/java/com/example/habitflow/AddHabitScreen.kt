@@ -194,69 +194,69 @@ fun AddHabitInputs(
         duration.toString()
     }
 
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // ✅ Good/Bad checkboxes moved to top
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Checkbox(checked = isGoodHabit, onCheckedChange = { onGoodHabitToggle() })
+                Text("Good Habit")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = isBadHabit, onCheckedChange = { onBadHabitToggle() })
+                Text("Bad Habit")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ✅ Habit Name
+        OutlinedTextField(
+            value = habitName,
+            onValueChange = onHabitNameChange,
+            label = { Text("Habit Name") },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // ✅ Good/Bad checkboxes moved to top
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Checkbox(checked = isGoodHabit, onCheckedChange = { onGoodHabitToggle() })
-                    Text("Good Habit")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = isBadHabit, onCheckedChange = { onBadHabitToggle() })
-                    Text("Bad Habit")
-                }
-            }
+                .padding(bottom = 10.dp)
+        )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // ✅ Habit Name
+        // ✅ Habit Description appears BETWEEN name field and checkbox when visible
+        if (showDescriptionField) {
             OutlinedTextField(
-                value = habitName,
-                onValueChange = onHabitNameChange,
-                label = { Text("Habit Name") },
+                value = habitDescription,
+                onValueChange = onHabitDescriptionChange,
+                label = { Text("Habit Description") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 10.dp)
             )
-
-            // ✅ Habit Description appears BETWEEN name field and checkbox when visible
-            if (showDescriptionField) {
-                OutlinedTextField(
-                    value = habitDescription,
-                    onValueChange = onHabitDescriptionChange,
-                    label = { Text("Habit Description") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 10.dp)
-                )
-            }
-
-            // ✅ Checkbox stays under both fields
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = showDescriptionField,
-                    onCheckedChange = onShowDescriptionToggle
-                )
-                Text("Add a Description")
-            }
-
         }
+
+        // ✅ Checkbox stays under both fields
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = showDescriptionField,
+                onCheckedChange = onShowDescriptionToggle
+            )
+            Text("Add a Description")
+        }
+
     }
+}
 
 
 @Composable
