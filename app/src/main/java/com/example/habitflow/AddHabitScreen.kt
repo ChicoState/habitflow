@@ -17,8 +17,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habitflow.viewmodel.AddHabitViewModel
+import java.util.Calendar
+
 
 @Composable
 fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPreferences) {
@@ -34,7 +37,7 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text = "Add a Habit",
@@ -55,7 +58,7 @@ fun AddHabitScreen(navController: NavController, sharedPreferences: SharedPrefer
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -394,44 +397,130 @@ fun DeadlineSelector(
     currentDeadline: String,
     onDeadlineChange: (String) -> Unit
 ) {
-    // For simplicity, let’s use a toggle: if the user clicks “Set End Date,” show a date picker (or a text field for now)
+    val months = (1..12).map { it.toString().padStart(2, '0') }
+    val days = (1..31).map { it.toString().padStart(2, '0') }
+    val years = (2025..2040).map { it.toString() }
+
+
+    val calendar = Calendar.getInstance()
+    val todayMonth = (calendar.get(Calendar.MONTH) + 1).toString().padStart(2, '0')
+    val todayDay = calendar.get(Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+    val todayYear = calendar.get(Calendar.YEAR).toString()
+
     var showDatePicker by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("Deadline:")
-        Spacer(modifier = Modifier.width(8.dp))
-        Button(onClick = { showDatePicker = true }) {
-            Text(if (currentDeadline.isNotBlank()) currentDeadline else "Set End Date")
-        }
+    // State for dropdowns
+    var selectedMonth by remember {
+        mutableStateOf(
+            currentDeadline.takeIf { it.contains("/") }?.split("/")?.getOrNull(0)
+                ?: todayMonth
+        )
+    }
+    var selectedDay by remember {
+        mutableStateOf(
+            currentDeadline.takeIf { it.contains("/") }?.split("/")?.getOrNull(1)
+                ?: todayDay
+        )
+    }
+    var selectedYear by remember {
+        mutableStateOf(
+            currentDeadline.takeIf { it.contains("/") }?.split("/")?.getOrNull(2)
+                ?: todayYear
+        )
     }
 
-    if (showDatePicker) {
-        // Replace this with your actual date picker implementation.
-        // For now, we use a simple text field for demonstration.
-        OutlinedTextField(
-            value = currentDeadline,
-            onValueChange = {
-                onDeadlineChange(it)
-            },
-            label = { Text("Enter End Date (YYYY-MM-DD)") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-        )
-        // Optionally add a button to dismiss the picker.
-        Button(
-            onClick = { showDatePicker = false },
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
-        ) {
-            Text("Done")
+    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+        Text("Deadline", style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = { showDatePicker = !showDatePicker }) {
+            Text(
+                if (showDatePicker)
+                    "Hide End Date Picker"
+                else if (currentDeadline.isNotBlank())
+                    "End Date: $currentDeadline"
+                else
+                    "Set End Date"
+            )
+        }
+
+        if (showDatePicker) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                DropdownField("Month", months, selectedMonth) { selectedMonth = it }
+                DropdownField("Day", days, selectedDay) { selectedDay = it }
+                DropdownField("Year", years, selectedYear) { selectedYear = it }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    val deadline = "$selectedMonth/$selectedDay/$selectedYear"
+                    onDeadlineChange(deadline)
+                    showDatePicker = false
+                },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Done")
+            }
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DropdownField(
+    label: String,
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+    ) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+            },
+            modifier = Modifier
+                .menuAnchor()
+                .width(115.dp),
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, lineHeight = 18.sp),
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 150.dp)
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option, fontSize = 14.sp) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+
 
 @Composable
 private fun ReminderFrequencyOption(
