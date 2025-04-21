@@ -117,26 +117,27 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
 
             TopAppBar(
                 title = {
-                    Column {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = "HabitFlow",
                             style = MaterialTheme.typography.headlineMedium
                         )
-                        user?.let {
-                            Text(
-                                text = it.displayName ?: "User",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { navController.navigate("settings") }) {
+                    IconButton(
+                        onClick = { navController.navigate("settings") },
+                        modifier = Modifier.size(55.dp)
+
+                        ) {
                         Icon(
                             Icons.Filled.Settings,
                             contentDescription = "Settings",
                             tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(40.dp)
                         )
                     }
                 },
@@ -145,6 +146,7 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
