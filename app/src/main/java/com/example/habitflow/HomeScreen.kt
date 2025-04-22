@@ -234,7 +234,7 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
                     }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        IconButton(onClick = { /* TODO: Stats */ }) {
+                        IconButton(onClick = { navController.navigate("stats") }) {
                             Icon(
                                 Icons.Filled.Info,
                                 contentDescription = "Stats",

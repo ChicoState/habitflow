@@ -33,6 +33,7 @@ import com.example.habitflow.ProgressScreen
 import com.example.habitflow.SettingsScreen
 import com.example.habitflow.SignUpScreen
 import com.example.habitflow.viewmodel.AddDataViewModel
+import com.example.habitflow.StatsPage
 
 
 class MainActivity : ComponentActivity() {
@@ -78,7 +79,7 @@ class MainActivity : ComponentActivity() {
                         navController,
                         startDestination = if (currentUser != null) "home/false" else "login"
                     ) {
-                        // ✅ Login and Sign-Up Screens
+                        // These are the Login and Sign-Up Screens
                         composable("login") { LoginScreen(navController) }
                         composable("signUp") { SignUpScreen(navController, auth) }
                         composable("profileSetup") { ProfileSetupScreen(navController) }
@@ -100,6 +101,10 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("addData") {
                             AddDataScreen(viewModel = addDataViewModel, navController = navController)
+                        }
+
+                        composable("stats") {
+                            StatsPage(navController = navController)
                         }
                     }
                 }
