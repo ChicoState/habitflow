@@ -64,7 +64,6 @@ class HomeViewModel(
 		}
 	}
 
-	// Helper function to loafHabitsByIds()
 	private fun loadUserDataForHabits(habits: List<Habit>) {
 		val habitsWithUserData = mutableListOf<Pair<Habit, UserData>>()
 
@@ -84,27 +83,21 @@ class HomeViewModel(
 		}
 	}
 
-	// Helper function to loadUserDataForHabits()
-	private fun commitSortedHabits(habitsWithUserData: List<Pair<Habit, UserData>>) {
-		val sorted = habitsWithUserData
-			.sortedBy { it.second.createDate.toDate() }
-			.associate { it.first to it.second }
-
-		_habits.value = sorted
-	}
-
-	// Helper function to load userDataForHabits()
+	// Helper function to loafHabitsByIds()
 	private fun loadUserDataForHabit(habit: Habit, onComplete: (Result<UserData>) -> Unit) {
 		viewModelScope.launch {
-			// Load user data from Firestore using the userDataId of the habit
 			val userDataId = habit.userDataId
 
-			// Attempt to load user data
+			if (userDataId.isBlank() || userDataId == "userData") {
+				Log.e("HomeViewModel", "Invalid userDataId for habit ${habit.id}: '$userDataId'")
+				onComplete(Result.failure(IllegalArgumentException("Invalid userDataId: '$userDataId'")))
+				return@launch
+			}
+
 			dataRepository.loadUserDataFromFirestore(
 				userDataId = userDataId,
 				onComplete = { result ->
 					result.onSuccess { loadedUserData ->
-						// Pass the loaded userData via the callback
 						onComplete(Result.success(loadedUserData))
 					}
 					result.onFailure { error ->
@@ -116,7 +109,16 @@ class HomeViewModel(
 		}
 	}
 
-	// Helper function to loadUserDataForHabit()
+	// Helper function to loadUserDataForHabits()
+	private fun commitSortedHabits(habitsWithUserData: List<Pair<Habit, UserData>>) {
+		val sorted = habitsWithUserData
+			.sortedBy { it.second.createDate.toDate() }
+			.associate { it.first to it.second }
+
+		_habits.value = sorted
+	}
+
+		// Helper function to loadUserDataForHabit()
 	fun moveToPastHabits(habitIds: Set<String>, onComplete: () -> Unit) {
 		onComplete()
 	}
