@@ -151,7 +151,7 @@ class DataRepository {
 
                 // If both timestamp and value are present, create an Entry
                 if (timestamp != null && value != null) {
-                    Entry(timestamp.seconds.toFloat(), value)
+                    Entry(timestamp.toDate().time.toFloat(), value)
                 } else {
                     null
                 }
@@ -160,7 +160,7 @@ class DataRepository {
 
         return UserData(
             userDataId = userDataId,
-            userData = calculateTimeDifferences(rawEntries),
+            userData = rawEntries, //calculateTimeDifferences(rawEntries),
             lastUpdated = data?.get("lastUpdated") as? Timestamp ?: Timestamp.now(),
             createDate = data?.get("createDate") as? Timestamp ?: Timestamp.now(),
             deadline = data?.get("deadline") as? String ?: "",
