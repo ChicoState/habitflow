@@ -16,7 +16,7 @@ data class UserData (
     val type: String = "",
     var userData: List<Entry> = emptyList(),
     var lastUpdated: Timestamp = Timestamp.now(),
-    val streak: Int = calculateStreak(userData),
+    val streak: Int,
     val createDate: Timestamp,
     val deadline: String? = null,
     val deadlineAsTimestamp: Timestamp? = parseDeadlineToTimestamp(deadline),

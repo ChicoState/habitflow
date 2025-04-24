@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import com.example.habitflow.model.Habit
 import com.example.habitflow.model.UserData
 import com.example.habitflow.viewmodel.AddDataViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun AddDataScreen(
@@ -29,6 +30,8 @@ fun AddDataScreen(
     var yes by remember { mutableStateOf(false) }
     var no by remember { mutableStateOf(false) }
     var showPrompt by remember { mutableStateOf(true) }
+
+    val coroutineScope = rememberCoroutineScope()
 
 
 
@@ -58,12 +61,15 @@ fun AddDataScreen(
                         onNoChecked = { no = true; yes = false },
                         buttonText = "Save Data",
                         onSubmitClick = {
-                            when (it.trackingMethod) {
-                                "numeric" -> viewModel.saveData(dataValue.toFloatOrNull())
-                                "timeBased" -> viewModel.timeBasedDataSaver(days, hours, minutes, seconds)
-                                "binary" -> viewModel.binaryDataSaver(yes)
+                            coroutineScope.launch {
+                                when (it.trackingMethod) {
+                                    // If they selected yes,
+                                    "numeric" -> viewModel.saveData(dataValue.toFloatOrNull(), yes)
+                                    "timeBased" -> viewModel.timeBasedDataSaver(days, hours, minutes, seconds)
+                                    "binary" -> viewModel.binaryDataSaver(yes)
+                                }
+                                navController.navigate("home/")
                             }
-                            navController.navigate("home/")
                         }
                     )
                 } else {
@@ -92,12 +98,14 @@ fun AddDataScreen(
                             onNoChecked = { no = true; yes = false },
                             buttonText = "Update Entry",
                             onSubmitClick = {
-                                when (it.trackingMethod) {
-                                    "numeric" -> viewModel.updateLastEntryY(dataValue.toFloat())
-                                    "timeBased" -> viewModel.timeBasedDataUpdater(days, hours, minutes, seconds)
-                                    "binary" -> viewModel.binaryDataUpdater(yes)
+                                coroutineScope.launch {
+                                    when (it.trackingMethod) {
+                                        "numeric" -> viewModel.updateLastEntryY(dataValue.toFloat(), yes)
+                                        "timeBased" -> viewModel.timeBasedDataUpdater(days, hours, minutes, seconds)
+                                        "binary" -> viewModel.binaryDataUpdater(yes)
+                                    }
+                                    navController.navigate("home/")
                                 }
-                                navController.navigate("home/")
                             }
                         )
                     }
