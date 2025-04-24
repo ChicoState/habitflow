@@ -100,7 +100,7 @@ fun AddDataScreen(
                             onSubmitClick = {
                                 coroutineScope.launch {
                                     when (it.trackingMethod) {
-                                        "numeric" -> viewModel.updateLastEntryY(dataValue.toFloat(), yes)
+                                        "numeric" -> viewModel.updateLastEntryY(dataValue.toFloat(), true)
                                         "timeBased" -> viewModel.timeBasedDataUpdater(days, hours, minutes, seconds)
                                         "binary" -> viewModel.binaryDataUpdater(yes)
                                     }
