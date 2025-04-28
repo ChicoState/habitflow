@@ -6,20 +6,31 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.habitflow.repository.HabitRepository
+import com.example.habitflow.viewmodel.StatsViewModel
+import com.example.habitflow.viewmodel.StatsViewModelFactory
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.Description
 import com.github.mikephil.charting.data.*
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsPage(navController: NavController) {
-    Column(modifier = Modifier.fillMaxSize()) {
+fun StatsScreen(
+    navController: NavController,
+    statsViewModel: StatsViewModel = viewModel(
+        factory = StatsViewModelFactory(HabitRepository, FirebaseAuth.getInstance())
+    )
+) {    Column(modifier = Modifier.fillMaxSize()) {
 
         // This is all the Top Bar
         TopAppBar(
@@ -56,11 +67,17 @@ fun StatsPage(navController: NavController) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
 
-            Text("Total Habits: 7")
-            Text("Longest Streak: 12 days")
-            Text("Habits Completed This Week: 24")
+            Spacer(modifier = Modifier.height(20.dp))
+            val habits by statsViewModel.habits.collectAsState()
+            val isLoading by statsViewModel.isLoading.collectAsState()
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                Text("Total Habits: ${habits.size}")
+                Text("Longest Streak: TBD days") // We'll replace "TBD" later
+                Text("Habits Completed This Week: TBD") // We'll replace "TBD" later
+            }
 
             Spacer(modifier = Modifier.height(30.dp))
 

@@ -189,5 +189,68 @@ object HabitRepository {
 			request
 		)
 	}
+
+	fun loadFullHabitsForUser(
+		user: FirebaseUser,
+		onSuccess: (List<Habit>) -> Unit,
+		onFailure: (String) -> Unit
+	) {
+		loadHabitsFromFirestore(
+			user,
+			onSuccess = { habitIds ->
+				if (habitIds.isEmpty()) {
+					onSuccess(emptyList())
+					return@loadHabitsFromFirestore
+				}
+
+				val db = getDatabase()
+				val habitCollection = db.collection("habits")
+				val fullHabits = mutableListOf<Habit>()
+				var remaining = habitIds.size
+				var failed = false
+
+				for (habitId in habitIds) {
+					habitCollection.document(habitId).get()
+						.addOnSuccessListener { document ->
+							document.data?.let { data ->
+								val habit = Habit(
+									id = document.id,
+									name = data["name"] as? String ?: "",
+									description = data["description"] as? String ?: "",
+									duration = (data["duration"] as? Number)?.toInt() ?: 0,
+									goalAmount = (data["goalAmount"] as? Number)?.toFloat() ?: 0f,
+									units = data["units"] as? String ?: "",
+									precision = data["precision"] as? String ?: "",
+									goalData = (data["goalData"] as? List<*>
+										?: emptyList<Any>()).mapNotNull { item ->
+										(item as? Map<*, *>)?.let { map ->
+											val x = (map["x"] as? Number)?.toFloat()
+											val y = (map["y"] as? Number)?.toFloat()
+											if (x != null && y != null) GoalPoint(x, y) else null
+										}
+									},
+									userDataId = data["userDataId"] as? String ?: "",
+									notificationTriggered = data["notificationTriggered"] as? Boolean ?: false
+								)
+								fullHabits.add(habit)
+							}
+							remaining--
+							if (remaining == 0 && !failed) {
+								onSuccess(fullHabits)
+							}
+						}
+						.addOnFailureListener { e ->
+							if (!failed) {
+								failed = true
+								onFailure(e.message ?: "Error loading full habits")
+							}
+						}
+				}
+			},
+			onFailure = { error ->
+				onFailure(error)
+			}
+		)
+	}
 }
 
