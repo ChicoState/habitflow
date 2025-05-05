@@ -1,5 +1,6 @@
 package com.example.habitflow
 
+import com.example.habitflow.model.NewHabit
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -13,5 +14,13 @@ class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
+    }
+}
+
+class NewHabitTest {
+    @Test
+    fun constructorTest() {
+        val o = NewHabit("", "", "", 0, 0f, "", emptyList(), false, null, "", "", null, null, false, "")
+        assertEquals("", o.id)
     }
 }
