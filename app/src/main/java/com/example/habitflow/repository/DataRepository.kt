@@ -6,6 +6,7 @@ import com.github.mikephil.charting.data.Entry
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
+import kotlinx.coroutines.tasks.await
 
 class DataRepository {
 
@@ -39,21 +40,48 @@ class DataRepository {
             }
     }
 
-    fun updateUserData(userDataId: String, newData: Map<String, Any>, currentTimestamp: Timestamp) {
+    suspend fun updateUserData(userDataId: String, newEntry: Map<String, Any>, didCompleteHabit: Boolean) {
         val db = getDatabase()
-        db.collection("userData")
-            .document(userDataId)
-            .update(
-                "data", FieldValue.arrayUnion(newData),
-                "lastUpdated", currentTimestamp
-            )
-            .addOnSuccessListener {
-                Log.d("DataRepository", "Data successfully updated")
-            }
-            .addOnFailureListener { exception ->
-                Log.e("DataRepository", "Error updating data: ${exception.message}")
-            }
+        val userDataRef = db.collection("userData").document(userDataId)
+
+        val snapshot = userDataRef.get().await()
+        val data = (snapshot.get("data") as? List<Map<String, Any>>)?.toMutableList() ?: mutableListOf()
+
+        // Get previous streak, default to 0 if absent
+        val lastStreak = data.lastOrNull()?.get("streak") as? Long ?: 0L
+        val newStreak = if (didCompleteHabit) lastStreak + 1 else 0
+        val enrichedEntry = newEntry.toMutableMap()
+        enrichedEntry["streak"] = newStreak
+
+        // Append the new entry (instead of using arrayUnion)
+        data.add(enrichedEntry)
+
+        // Write back the full array
+        userDataRef.update(
+            "data", data,
+            "lastUpdated", Timestamp.now()
+        ).addOnSuccessListener {
+            Log.d("DataRepository", "Full entry with streak added successfully.")
+        }.addOnFailureListener { exception ->
+            Log.e("DataRepository", "Error writing entry with streak: ${exception.message}")
+        }
     }
+
+//    fun updateUserData(userDataId: String, newData: Map<String, Any>, currentTimestamp: Timestamp) {
+//        val db = getDatabase()
+//        db.collection("userData")
+//            .document(userDataId)
+//            .update(
+//                "data", FieldValue.arrayUnion(newData),
+//                "lastUpdated", currentTimestamp
+//            )
+//            .addOnSuccessListener {
+//                Log.d("DataRepository", "Data successfully updated")
+//            }
+//            .addOnFailureListener { exception ->
+//                Log.e("DataRepository", "Error updating data: ${exception.message}")
+//            }
+//    }
 
     fun loadUserDataFromFirestore(
         userDataId: String,
@@ -151,16 +179,21 @@ class DataRepository {
 
                 // If both timestamp and value are present, create an Entry
                 if (timestamp != null && value != null) {
-                    Entry(timestamp.seconds.toFloat(), value)
+                    Entry(timestamp.toDate().time.toFloat(), value)
                 } else {
                     null
                 }
             }
         } ?: emptyList()
 
+        val streakFromEntry = (data?.get("data") as? List<Map<String, Any>>)
+            ?.lastOrNull()
+            ?.get("streak") as? Number ?: 1
+
         return UserData(
             userDataId = userDataId,
-            userData = calculateTimeDifferences(rawEntries),
+            userData = rawEntries, //calculateTimeDifferences(rawEntries),
+            streak = streakFromEntry.toInt(),
             lastUpdated = data?.get("lastUpdated") as? Timestamp ?: Timestamp.now(),
             createDate = data?.get("createDate") as? Timestamp ?: Timestamp.now(),
             deadline = data?.get("deadline") as? String ?: "",
