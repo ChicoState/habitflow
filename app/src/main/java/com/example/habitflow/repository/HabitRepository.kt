@@ -153,7 +153,6 @@ object HabitRepository {
 		val userDoc = db.collection("users").document(user.uid)
 		val batch = db.batch()
 
-		// Remove habits from user
 		batch.update(userDoc, "habits", FieldValue.arrayRemove(*habitIds.toTypedArray()))
 
 		habitIds.forEach { habitId ->

@@ -10,8 +10,8 @@ data class NewHabit(
 	val goalData: List<Map<String, Any>> = emptyList(),
 	val remindersEnabled: Boolean = false,
 	val reminderFrequency: String? = null,
-	val category: String = "",          // e.g., "Health", "Productivity"
-	val frequency: String = "",         // e.g., "Daily", "3 times per week"
+	val category: String = "",
+	val frequency: String = "",
 	val customReminderValue: String? = null,
 	val customReminderUnit: String? = null,
 	var notificationTriggered: Boolean? = false,

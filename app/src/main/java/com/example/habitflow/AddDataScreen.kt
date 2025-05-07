@@ -20,6 +20,8 @@ fun AddDataScreen(
     viewModel: AddDataViewModel,
     navController: NavController
 ) {
+
+
     val habit = viewModel.retrieveHabit()
     val userData = viewModel.retrieveUserData()
     var dataValue by remember { mutableStateOf("") }
@@ -68,7 +70,10 @@ fun AddDataScreen(
                                     "timeBased" -> viewModel.timeBasedDataSaver(days, hours, minutes, seconds)
                                     "binary" -> viewModel.binaryDataSaver(yes)
                                 }
-                                navController.navigate("home/")
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set("dataUpdated", true)
+                                navController.popBackStack()
                             }
                         }
                     )
@@ -104,7 +109,10 @@ fun AddDataScreen(
                                         "timeBased" -> viewModel.timeBasedDataUpdater(days, hours, minutes, seconds)
                                         "binary" -> viewModel.binaryDataUpdater(yes)
                                     }
-                                    navController.navigate("home/")
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("dataUpdated", true)
+                                    navController.popBackStack()
                                 }
                             }
                         )
@@ -129,7 +137,12 @@ fun HabitTopBar(habit: Habit?, navController: NavController) {
         },
         navigationIcon = {
             IconButton(
-                onClick = { navController.navigate("home/") },
+                onClick = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("dataUpdated", true)
+                    navController.popBackStack()
+                          },
                 modifier = Modifier.size(40.dp).padding(5.dp)
             ) {
                 Icon(
@@ -229,7 +242,13 @@ fun UpdatePrompt(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Button(
-                onClick = { navController.navigate("home/") }
+
+                onClick = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("dataUpdated", true)
+                    navController.popBackStack()
+                }
             ) {
                 Text("No Thanks")
             }

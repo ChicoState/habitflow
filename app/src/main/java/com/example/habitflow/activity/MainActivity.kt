@@ -58,7 +58,6 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
 
-        // Initialize Firebase Auth and Firestore
         auth = Firebase.auth
         db = FirebaseFirestore.getInstance()
         sharedPreferences = getSharedPreferences("habitflow_prefs", Context.MODE_PRIVATE)
@@ -66,7 +65,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val isDarkMode = remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) }
 
-            HabitflowTheme(darkTheme = isDarkMode.value) {  // ✅ Pass darkMode state
+            HabitflowTheme(darkTheme = isDarkMode.value) {
                 Surface(
                     modifier = androidx.compose.ui.Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -79,12 +78,10 @@ class MainActivity : ComponentActivity() {
                         navController,
                         startDestination = if (currentUser != null) "home/false" else "login"
                     ) {
-                        // These are the Login and Sign-Up Screens
                         composable("login") { LoginScreen(navController) }
                         composable("signUp") { SignUpScreen(navController, auth) }
                         composable("profileSetup") { ProfileSetupScreen(navController) }
 
-                        // ✅ Main App Screens
                         composable("home/{isDeleting}") { backStackEntry ->
                             val isDeletingArg = backStackEntry.arguments?.getString("isDeleting") ?: "false"
                             HomeScreen(addDataViewModel = addDataViewModel, navController = navController, isDeleting = isDeletingArg)
@@ -94,7 +91,7 @@ class MainActivity : ComponentActivity() {
                             val habitId = backStackEntry.arguments?.getString("habitId") ?: ""
                             val userDataId = backStackEntry.arguments?.getString("userDataId") ?: ""
                             val span = backStackEntry.arguments?.getString("span") ?: ""
-                            ProgressScreen(navController = navController, habitId = habitId, userDataId = userDataId, span = span, sharedPreferences = sharedPreferences)
+                            ProgressScreen(dataViewModel = addDataViewModel, navController = navController, habitId = habitId, userDataId = userDataId, span = span, sharedPreferences = sharedPreferences)
                         }
                         composable("settings") {
                             SettingsScreen(navController, isDarkMode, sharedPreferences)

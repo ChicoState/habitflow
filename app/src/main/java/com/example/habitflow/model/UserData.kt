@@ -8,6 +8,7 @@ import com.github.mikephil.charting.data.Entry
 import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
@@ -16,12 +17,11 @@ data class UserData (
     val type: String = "",
     var userData: List<Entry> = emptyList(),
     var lastUpdated: Timestamp = Timestamp.now(),
-    val streak: Int,
     val createDate: Timestamp,
     val deadline: String? = null,
     val deadlineAsTimestamp: Timestamp? = parseDeadlineToTimestamp(deadline),
     val backgroundColor: Color = getColorBasedOnType(type),
-    val progressPercentage: Float = calculateDeadlineRatio(createDate, lastUpdated, deadlineAsTimestamp),
+    val progressPercentage: Float? = calculateDeadlineRatio(createDate, lastUpdated, deadlineAsTimestamp),
     val promptEntry: Boolean = promptForDataEntry(lastUpdated, userData),
     val trackingMethod: String = ""
 ) {
@@ -39,24 +39,13 @@ data class UserData (
 
     companion object {
 
-        // Helper function to decreasing value
-        private fun calculateDecreasing(userData: List<Entry>): Boolean? {
-            if (userData.size <= 1) {
-                return null
-            }
-            val firstY = userData.first().y
-            val lastY = userData.last().y
-            if (firstY == lastY) return null
-            return firstY > lastY
-        }
-
         @SuppressLint("DefaultLocale")
         fun calculateDeadlineRatio(
             createDate: Timestamp,
             lastUpdated: Timestamp,
             deadlineAsTimestamp: Timestamp?
-        ): Float {
-            val deadline = deadlineAsTimestamp ?: return 0f
+        ): Float? {
+            val deadline = deadlineAsTimestamp ?: return null
 
             val timeDifferenceFromCreateDate = lastUpdated.seconds - createDate.seconds
             val timeDifferenceToDeadline = deadline.seconds - createDate.seconds
@@ -118,29 +107,69 @@ data class UserData (
 
             return lastUpdatedDate.time == today.time
         }
-
-
-        fun calculateStreak(userData: List<Entry>): Int {
-            if (userData.isEmpty()) return 0
-
-            if (userData.size == 1) return 1
-            var streak = 1
-
-            for (i in userData.size - 1 downTo 1) {
-                val currentX = userData[i].x
-                val previousX = userData[i - 1].x
-
-                // Calculate the difference in minutes between adjacent x values
-                val timeDifferenceInMinutes = abs(currentX - previousX)
-
-                if (timeDifferenceInMinutes in 720.0..1440.0) {
-                    streak++
-                } else {
-                    break
-                }
-            }
-            return streak
+    }
+    fun calculateDecreasing(userData: List<Entry>): Boolean? {
+        if (userData.size <= 1) {
+            return null
         }
+        val firstY = userData.first().y
+        val lastY = userData.last().y
+        if (firstY == lastY) return null
+        return firstY > lastY
+    }
+
+    fun calculateIncreasing(userData: List<Entry>): Boolean? {
+        if (userData.size <= 1) {
+            return null
+        }
+        val firstY = userData.first().y
+        val lastY = userData.last().y
+        if (firstY == lastY) return null
+        return firstY < lastY
+    }
+
+    fun firstAndLastMatch(): Boolean {
+        if (userData.size < 2) return false
+        val firstY = userData.first().y
+        val lastY = userData.last().y
+        return kotlin.math.abs(firstY - lastY) < 0.001f
+    }
+
+    val streak: Int
+        get() = calculateStreak(userData)
+
+    private fun calculateStreak(userData: List<Entry>): Int {
+        if (userData.isEmpty()) return 0
+        if (userData.size == 1) return 1
+
+        var streak = 1
+
+        for (i in userData.size - 1 downTo 1) {
+            val currDate = getCalendarDay(userData[i].x)
+            val prevDate = getCalendarDay(userData[i - 1].x)
+
+            if (isNextDay(prevDate, currDate)) {
+                streak++
+            } else {
+                break
+            }
+        }
+        return streak
+    }
+    private fun getCalendarDay(timestampMillis: Float): Calendar {
+        return Calendar.getInstance().apply {
+            time = Date(timestampMillis.toLong())
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+    }
+
+    private fun isNextDay(prev: Calendar, curr: Calendar): Boolean {
+        prev.add(Calendar.DAY_OF_YEAR, 1)
+        return prev.get(Calendar.YEAR) == curr.get(Calendar.YEAR) &&
+                prev.get(Calendar.DAY_OF_YEAR) == curr.get(Calendar.DAY_OF_YEAR)
     }
 }
 
