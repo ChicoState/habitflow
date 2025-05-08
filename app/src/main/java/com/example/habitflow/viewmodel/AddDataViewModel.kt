@@ -9,6 +9,8 @@ import com.github.mikephil.charting.data.Entry
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.util.Calendar
+import java.util.Date
 
 class AddDataViewModel(
     private val dataRepository: DataRepository = DataRepository()
@@ -39,19 +41,6 @@ class AddDataViewModel(
         }
     }
 
-//    fun saveData(value: Float?) {
-//        if (value == null) return
-//        val userDataId = this.userDataId
-//        userDataId?.let {
-//            val currentTimestamp = Timestamp.now()
-//            val newData = mapOf(
-//                "value" to value,
-//                "timestamp" to currentTimestamp
-//            )
-//            dataRepository.updateUserData(userDataId, newData, currentTimestamp)
-//        }
-//    }
-
     suspend fun timeBasedDataSaver(days: Int, hours: Int, minutes: Int, seconds: Int) {
         val value =  calculateTimeBasedValue(days, hours, minutes, seconds)
         saveData(value, didCompleteHabit = true) // Always assume
@@ -62,7 +51,6 @@ class AddDataViewModel(
         updateLastEntryY(value, didCompleteHabit = true)
     }
 
-    // Helper function for time based data for saveData() and updateLastEntryY()
     private fun calculateTimeBasedValue(days: Int, hours: Int, minutes: Int, seconds: Int): Float {
         val totalSeconds = (days * 86400) + (hours * 3600) + (minutes * 60) + seconds
         return totalSeconds.toFloat()
@@ -77,25 +65,6 @@ class AddDataViewModel(
         val value = if (completed) 1f else 0f
         updateLastEntryY(value, completed)
     }
-
-//    suspend fun binaryDataSaver(completed: Boolean) {
-//        val value = calculateBinaryValue(completed)
-//        saveData(value)
-//    }
-//
-//    fun binaryDataUpdater(completed: Boolean) {
-//        val value = calculateBinaryValue(completed)
-//        updateLastEntryY(value)
-//    }
-
-//    // Helper function for binary based data for saveData() and updateLastEntryY()
-//    private fun calculateBinaryValue(completed: Boolean): Float {
-//        val valueToAdd = if (completed) 1f else -1f
-//        val lastY = userData?.userData?.lastOrNull()?.y ?: 0f
-//
-//        val updatedY = (lastY + valueToAdd).coerceAtLeast(0f)
-//        return updatedY
-//    }
 
     fun getLastEntryY(): Float? {
         return userData?.userData?.lastOrNull()?.y
@@ -113,53 +82,37 @@ class AddDataViewModel(
 
             val data = (snapshot.get("data") as? List<Map<String, Any>>)?.toMutableList() ?: return
 
-            val lastStreak = data.lastOrNull()?.get("streak") as? Long ?: 0L
-            val newStreak = if (didCompleteHabit) lastStreak + 1 else 0
+            val updatedEntry = data.last().toMutableMap().apply {
+                this["value"] = newY
+                this["timestamp"] = currentTimestamp
+            }
+            data[data.lastIndex] = updatedEntry
 
+            val entries = data.mapNotNull { entry ->
+                val ts = (entry["timestamp"] as? Timestamp)?.toDate()?.time?.toFloat()
+                val value = (entry["value"] as? Number)?.toFloat()
+                if (ts != null && value != null) Entry(ts, value) else null
+            }
 
-            val updatedEntry = mapOf(
-                "value" to newY,
-                "timestamp" to currentTimestamp,
-                "streak" to newStreak
-            )
+            val tempUserData = userData.copy(userData = entries)
 
-            // Replace last entry
+            val newStreak = tempUserData.streak
+
+            updatedEntry["streak"] = newStreak
             data[data.lastIndex] = updatedEntry
 
             snapshot.reference.update(
                 "data", data,
                 "lastUpdated", currentTimestamp
             ).addOnSuccessListener {
-                Log.d("EntryDebug", "Updated last entry with streak: $updatedEntry")
-            }.addOnFailureListener { e: Exception ->
+                Log.d("EntryDebug", "Updated last entry with streak: $newStreak")
+            }.addOnFailureListener { e ->
                 Log.e("EntryDebug", "Failed to update last entry: ${e.message}")
             }
         } else {
             Log.e("UpdateEntry", "Missing userData or userDataId or empty list")
         }
     }
-
-
-//    fun updateLastEntryY(newY: Float) {
-//        val userDataId = this.userDataId
-//        val userData = this.userData
-//
-//        if (userDataId != null && userData != null && userData.userData.isNotEmpty()) {
-//            val lastIndex = userData.userData.lastIndex
-//            val lastEntry = userData.userData[lastIndex]
-//            val updatedEntry = Entry(lastEntry.x, newY)
-//
-//            val updatedList = userData.userData.toMutableList().apply {
-//                this[lastIndex] = updatedEntry
-//            }
-//
-//            userData.userData = updatedList
-//
-//            dataRepository.updateLastEntryInFirestore(userDataId, updatedEntry)
-//        } else {
-//            Log.e("UpdateEntry", "Could not update last entry. Missing userData or userDataId or entries empty.")
-//        }
-//    }
 
     fun retrieveHabit(): Habit? {
         return habit

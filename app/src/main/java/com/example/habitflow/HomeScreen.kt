@@ -69,7 +69,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
+import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlin.collections.setOf
 import com.example.habitflow.model.Habit
 import com.example.habitflow.model.UserData
@@ -99,10 +101,20 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
         homeViewModel.loadHabits()
     }
 
+    val currentBackStackEntry = navController.currentBackStackEntryAsState().value
+    LaunchedEffect(currentBackStackEntry) {
+        val savedStateHandle = currentBackStackEntry?.savedStateHandle
+        savedStateHandle?.getLiveData<Boolean>("dataUpdated")?.observeForever { updated ->
+            if (updated == true) {
+                homeViewModel.loadHabits()
+                savedStateHandle.set("dataUpdated", false)
+            }
+        }
+    }
+
     val selectedHabits = remember { mutableStateOf(mutableSetOf<String>()) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background Logo Image (centered)
         Image(
             painter = painterResource(id = R.drawable.habitflow_background),
             contentDescription = "HabitFlow Logo Background",
@@ -116,6 +128,16 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
         Column(modifier = Modifier.fillMaxSize()) {
 
             TopAppBar(
+                navigationIcon = {
+                    // Invisible placeholder to balance the settings button
+                    IconButton(onClick = {}, enabled = false) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings, // any icon, won't be shown
+                            contentDescription = null,
+                            tint = Color.Transparent // fully transparent
+                        )
+                    }
+                },
                 title = {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -123,7 +145,7 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
                     ) {
                         Text(
                             text = "HabitFlow",
-                            style = MaterialTheme.typography.headlineMedium
+                            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
                         )
                     }
                 },
@@ -131,13 +153,14 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
                     IconButton(
                         onClick = { navController.navigate("settings") },
                         modifier = Modifier.size(55.dp)
-
-                        ) {
+                    ) {
                         Icon(
                             Icons.Filled.Settings,
                             contentDescription = "Settings",
                             tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier
+                                .size(40.dp)
+                                .padding(5.dp)
                         )
                     }
                 },
@@ -146,7 +169,6 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -185,7 +207,6 @@ fun HomeScreen(addDataViewModel: AddDataViewModel, navController: NavController,
             }
         }
 
-        // BOTTOM ACTION BAR
         Box(
             modifier = Modifier
                 .fillMaxSize(),
@@ -345,6 +366,7 @@ fun HabitItem(
 
     val backgroundColor = userData.backgroundColor
     val notificationIcon = habitCardViewModel.getNotificationIcon()
+    val progress = habitCardViewModel.getUserProgress()
 
     val pressedBackgroundColor = if (isDeleting == "true" && isPressed) {
         if (isDarkTheme) Color(0xFF1E88E5).copy(alpha = 0.3f)
@@ -427,7 +449,7 @@ fun HabitItem(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Box(modifier = Modifier.weight(.8f)) {
-                        MainTitleDisplay(habit, userData)
+                        MainTitleDisplay(habit, progress)
                     }
                     Box(modifier = Modifier
                         .weight(0.7f)
@@ -441,7 +463,6 @@ fun HabitItem(
                 }
             }
         }
-        // IconButton in the upper right corner
         IconButton(
             onClick = {
                 dataViewModel.setHabit(habit)
@@ -458,18 +479,24 @@ fun HabitItem(
 }
 
 @Composable
-fun MainTitleDisplay(habit: Habit, userData: UserData) {
+fun MainTitleDisplay(habit: Habit, progress: Float?) {
     val habitName = habit.name
-    val progress = userData.progressPercentage
     Column {
         Text(
             text = habitName,
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
         )
-        Text(
-            text = "${progress}% Complete",
-            style = MaterialTheme.typography.titleMedium
-        )
+        if (progress != null) {
+            Text(
+                text = "${progress}% Complete",
+                style = MaterialTheme.typography.titleMedium
+            )
+        } else {
+            Text(
+                text = "No deadline.",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
     }
 }
 
@@ -491,20 +518,38 @@ fun StreakDisplay(userData: UserData?) {
 @Composable
 fun ArrowDirectionDisplay(userData: UserData) {
     val trendIcon = userData.trendDrawable
-
-    Column (
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxHeight()
-    ) {
-        Image(
-            painter = painterResource(id = trendIcon),
-            contentDescription = "Trend Arrow",
+    if (userData.userData.size > 0) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .alpha(0.5f)
-        )
+                .fillMaxHeight()
+        ) {
+            Image(
+                painter = painterResource(id = trendIcon),
+                contentDescription = "Trend Arrow",
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .alpha(0.5f)
+            )
+        }
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Start tracking today!",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth().padding(end = 20.dp)
+                )
+            }
+        }
     }
 }
 

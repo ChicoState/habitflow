@@ -1,10 +1,9 @@
 package com.example.habitflow
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,11 +11,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.compose.ui.Alignment
 import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import androidx.compose.ui.viewinterop.AndroidView
-import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 import com.github.mikephil.charting.components.XAxis
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,13 +27,30 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.content.SharedPreferences
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.painterResource
+import androidx.core.graphics.ColorUtils
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.habitflow.model.AlternatingBackgroundRenderer
+import com.example.habitflow.model.UserData
+import com.example.habitflow.ui.theme.hf_teal
+import com.example.habitflow.viewmodel.AddDataViewModel
+import com.example.habitflow.viewmodel.LineChartViewModel
 import com.example.habitflow.viewmodel.ProgressViewModel
+import com.github.mikephil.charting.animation.Easing
+import com.github.mikephil.charting.formatter.ValueFormatter
+import java.text.SimpleDateFormat
+import java.util.*
 
 
+@SuppressLint("UnrememberedGetBackStackEntry")
 @Composable
 fun ProgressScreen(
+    dataViewModel: AddDataViewModel,
     navController: NavController,
     habitId: String,
     userDataId: String,
@@ -45,379 +59,150 @@ fun ProgressScreen(
 ) {
 
     val viewModel: ProgressViewModel = viewModel()
+    val userData by viewModel.spanData.collectAsState()
+    val chartViewModel: LineChartViewModel = viewModel()
+    val chartData = chartViewModel.generateChartData(userData)
     val habitState by viewModel.habit.collectAsState()
     val dataState by viewModel.userData.collectAsState()
-    val habitName = habitState?.name ?: ""
-    val type = dataState?.type ?: ""
+    val habitName = viewModel.getHabitName()
+    val progress = viewModel.getUserProgress()
+    val streak = viewModel.getStreak()
+    val deadline = viewModel.getDeadline()
+    val todayValue = viewModel.getTodayValue()
+    val buttons = viewModel.getSpanButtons(habitId, userDataId)
+    val darkMode by remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) }
+    val navBackStackEntry = remember(habitId, userDataId, span) { navController.getBackStackEntry("progress/${habitId}/${userDataId}/$span") }
+    val result = navBackStackEntry.savedStateHandle.getLiveData<Boolean>("dataUpdated")
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-
+    LaunchedEffect(span) {
+        viewModel.setSpan(span)
+    }
     LaunchedEffect(habitId) {
         viewModel.loadHabit(habitId)
         viewModel.loadUserData(userDataId)
     }
-
-    val userDataList = if (type== "good" )
-    { listOf(DataLists.goodWeeklyData, DataLists.goodMonthlyData, DataLists.goodOverallData) }
-    else { listOf(DataLists.badWeeklyData, DataLists.badMonthlyData, DataLists.badOverallData) }
-    val comparisonDataList = if (type == "good" )
-    { listOf(DataLists.goodComparisonData1, DataLists.goodComparisonData2, DataLists.goodComparisonData3) }
-    else { listOf(DataLists.badComparisonData1, DataLists.badComparisonData2, DataLists.badComparisonData3) }
-
-    val userData =
-        if (span == "Weekly") { userDataList[0] }
-        else if (span == "Monthly") { userDataList[1] }
-        else { userDataList[2] }
-    val comparisonData =
-        if (span == "Weekly") { comparisonDataList[0] }
-        else if (span == "Monthly") { comparisonDataList[1] }
-        else { comparisonDataList[2] }
-
-    // ✅ Get the current Dark Mode value from SharedPreferences
-    val darkMode by remember {
-        mutableStateOf(sharedPreferences.getBoolean("dark_mode", false))
+    LaunchedEffect(result, lifecycleOwner) {
+        result.observe(lifecycleOwner) { updated ->
+            if (updated == true) {
+                viewModel.loadUserData(userDataId)
+                navBackStackEntry.savedStateHandle["dataUpdated"] = false
+            }
+        }
     }
 
-
-
-    val progress = if (
-        userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
-    ) {
-        (userDataList[2].last().x / comparisonDataList[2].size) * 100
-    } else {
-        0f
-    }
-    val streak = if (
-        userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
-    ) {
-        if (type == "good") {
-            viewModel.countMatchingFromEndGood(userDataList[2], comparisonDataList[2])
-        } else {
-            viewModel.countMatchingFromEndBad(userDataList[2], comparisonDataList[2])
-        }
-    } else 0
-
-    val larger = if (
-        userDataList[2].isNotEmpty() && comparisonDataList[2].isNotEmpty()
-    ) {
-        if (type == "good") {
-            viewModel.countDaysWithLargerY(userDataList[2], comparisonDataList[2])
-        } else {
-            viewModel.countDaysWithSmallerY(userDataList[2], comparisonDataList[2])
-        }
-    } else 0
-    val goalMet = viewModel.compareLists(userData, comparisonData)
-    /*val dates = if (userData.isNotEmpty()) {
-        viewModel.convertToDates(userData, "2/5/25")
-    } else {
-        emptyList()
-    }*/
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .padding(top = 30.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 16.dp), /// changed padding to be less
-            horizontalAlignment = Alignment.CenterHorizontally // Optionally, you can also center vertically if needed
-
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    //.background(androidx.compose.ui.graphics.Color.Gray)
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp)
-            ) {
-                IconButton(
-                    onClick = { navController.navigate("home/") }, // Navigate to "home/"
-                    modifier = Modifier
-                        .size(40.dp) // Increase the size of the icon button for the bubble effect
-                        .padding(5.dp)
-                        .align(Alignment.TopStart)
-
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = if(darkMode) Color.White else Color.Black
-                    )
-                }
-                Text(
-                    text = habitName,
-                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.align(Alignment.Center)
-
-                )
-            }
+            ProgressHeader(
+                habitName = habitName,
+                darkMode = darkMode,
+                onBackClick = { navController.navigate("home/") }
+            )
             Spacer(modifier = Modifier.height(16.dp))
-
-
-            //////////////////// Adding in three top rows for progress, streak, and overachiever
-
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp), // Add padding as necessary
-                horizontalArrangement = Arrangement.Start, // Align items to the left
-                verticalAlignment = Alignment.CenterVertically // Align vertically in the center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(45.dp)
-                        .background(Color.White, shape = CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val canvasSize = size.minDimension
-                        val radius = canvasSize / 2f
-                        val sweepAngle = 360f * (progress / 100f)
-
-                        // Draw the full circle
-                        drawCircle(
-                            color = Color.Gray.copy(alpha = 0.3f),
-                            radius = radius
-                        )
-
-                        // Draw the filled portion of the pie chart
-                        drawArc(
-                            color = Color(0xFF00C853), // Green color for the filled portion
-                            startAngle = -90f, // Starting from the top
-                            sweepAngle = sweepAngle, // Percentage-based angle
-                            useCenter = true,
-                            size = Size(canvasSize, canvasSize)
-                        )
-                    }
-
-                    // Display the percentage inside the pie chart
-                    Text(
-                        text = "${progress.toInt()}%",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.padding(5.dp))
-                Text(
-                    text = "You have completed ${userDataList[2].size} days of your ${comparisonDataList[2].size} day goal! ",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp) // Adjust font size as needed
-                )
-            }
-            //Spacer(modifier = Modifier.weight(1f))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp), // Add padding as necessary
-                horizontalArrangement = Arrangement.Start, // Align items to the left
-                verticalAlignment = Alignment.CenterVertically // Align vertically in the center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp) // You can change the size according to your needs
-                        .background(Color.Transparent), // Ensures background is transparent
-                    //contentAlignment = Alignment.Center
-                ) {
-                    // Fire emoji as background
-                    Text(
-                        text = "🔥",
-                        style = TextStyle(
-                            fontSize = 45.sp, // Adjust the emoji size
-                            color = Color.Gray.copy(alpha = 0.7f), // You can adjust the color of the emoji
-                            fontWeight = FontWeight.Bold,
-                        ),
-                        modifier = Modifier
-                            .align(Alignment.Center), // Center the text vertically over the emoji
-                        textAlign = TextAlign.Center // Center the fire emoji
-                    )
-
-                    // Text on top of the fire emoji
-                    Text(
-                        text = "$streak",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .align(Alignment.Center), // Center the text vertically over the emoji
-                        textAlign = TextAlign.Center
-                    )
-                }
-                Spacer(modifier = Modifier.padding(5.dp))
-                Text(
-                    text = "You have reached $streak consecutive days of reaching your daily goal! ",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp) // Adjust font size as needed
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp), // Add padding as necessary
-                horizontalArrangement = Arrangement.Start, // Align items to the left
-                verticalAlignment = Alignment.CenterVertically // Align vertically in the center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp) // You can change the size according to your needs
-                        .background(Color.Transparent), // Ensures background is transparent
-                    //contentAlignment = Alignment.Center
-                ) {
-                    // Fire emoji as background
-                    Text(
-                        text = "⭐",
-                        style = TextStyle(
-                            fontSize = 45.sp, // Adjust the emoji size
-                            color = Color.Gray.copy(alpha = 0.6f), // You can adjust the color of the emoji
-                            fontWeight = FontWeight.Bold,
-                        ),
-                        modifier = Modifier
-                            .align(Alignment.Center), // Center the text vertically over the emoji
-                        textAlign = TextAlign.Center // Center the fire emoji
-                    )
-
-                    // Text on top of the fire emoji
-                    Text(
-                        text = "$larger",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .align(Alignment.Center), // Center the text vertically over the emoji
-                        textAlign = TextAlign.Center
-                    )
-                }
-                Spacer(modifier = Modifier.padding(5.dp))
-                Text(
-                    text = "You have reached a total of $larger days of exceeding your daily goal! ",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp) // Adjust font size as needed
-                )
-            }
-
-
-            //////////////////////////////////////////////////////////////////////////////////
-
-
-            //////////////// Moving buttons to the middle of the screen: weekly, monthly, and overall
-
-
-            Spacer(modifier = Modifier.padding(16.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    //.align(Alignment.BottomCenter) // Align the Row at the bottom
-                    //.background(androidx.compose.ui.graphics.Color.White)
-                    .padding(horizontal = 10.dp)
-                    .padding(bottom = 16.dp), // Space at the bottom
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Button 1
-                Button(
-                    onClick = { navController.navigate("progress/${habitId}/Weekly") },
-                    modifier = Modifier.width(85.dp).height(48.dp),
-                    shape = RoundedCornerShape(5.dp),
-                    contentPadding = PaddingValues(0.dp) // Removes the internal padding
-
-                ) {
-                    Text(
-                        text = "Weekly"
-                    )
-                }
-
-                // Button 2
-                Button(
-                    onClick = { navController.navigate("progress/${habitId}/Monthly") },
-                    modifier = Modifier.width(85.dp).height(48.dp),
-                    shape = RoundedCornerShape(5.dp),
-                    contentPadding = PaddingValues(0.dp) // Removes the internal padding
-
-                ) {
-                    Text("Monthly")
-                }
-
-                // Button 3
-                Button(
-                    onClick = { navController.navigate("progress/${habitId}/Overall") },
-                    modifier = Modifier.width(85.dp).height(48.dp),
-                    shape = RoundedCornerShape(5.dp),
-                    contentPadding = PaddingValues(0.dp) // Removes the internal padding
-                ) {
-                    Text("Overall")
-                }
-            }
-            Spacer(modifier = Modifier.padding(8.dp))
-
-
-            ////////////////////////////////////////////////////////////////////////////////////
-
-
-            Text(
-                text = "$span Progress",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.align(Alignment.CenterHorizontally) // This centers the text horizontally
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.Start) {
-                    LineChartView(
-                        dataSets = listOf(
-                            userData,
-                            habitState?.goalData?.map { Entry(it.x, it.y) } ?: emptyList()
+                dataState?.let { userData ->
+                    if (viewModel.shouldPromptEntry()) {
+                        DataEntryPromptCard(
+                            onAddClick = {
+                                habitState?.let { habit ->
+                                    dataViewModel.setHabit(habit)
+                                    dataViewModel.setUserData(userData)
+                                    navController.navigate("addData")
+                                }
+                            }
                         )
-                    )
-                }
-            }
-
-
-            /////////////////////////////////////////////// Adding table with userData components
-
-
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                // Table Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.LightGray) // Background color for the header
-                        .padding(8.dp), // Padding around header text
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Day",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
-                    )
-                    Text(
-                        text = "Your Data",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.weight(1f).align(Alignment.CenterVertically)
-                    )
-                }
-                // Table Data
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f) // <-- ✅ Proper constraint inside Column
-                ) {
-                    itemsIndexed(goalMet.reversed(), key = { _, entry -> "${entry.x}-${entry.y}" }) { index, entry ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(if (index % 2 == 0) Color.LightGray else Color.Transparent)
-                                .border(1.dp, Color.Gray),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = entry.x.toString(),
-                                modifier = Modifier.padding(start = 8.dp),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = entry.y.toString(),
-                                modifier = Modifier.padding(2.dp),
-                                style = MaterialTheme.typography.bodyMedium
+                    } else {
+                        if (todayValue != null) {
+                            TodayEntryCard(
+                                todayValue = todayValue,
+                                units = habitState?.units ?: "",
+                                onClick = {
+                                    habitState?.let { habit ->
+                                        dataViewModel.setHabit(habit)
+                                        dataViewModel.setUserData(userData)
+                                        navController.navigate("addData")
+                                    }
+                                }
                             )
                         }
                     }
+                }
+            }
+            if (userData.isNotEmpty()) {
+                if (userData.size > 1) {
+                    Spacer(modifier = Modifier.padding(8.dp))
+                    Text(
+                        text = "$span Progress",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.Start) {
+                            LineChartView(chartData = chartData)
+                        }
+                    }
+                }
+                if (dataState?.userData?.size!! > 1) {
+                    Spacer(modifier = Modifier.padding(8.dp))
+                    SpanSelectorButtons(buttons = buttons) { route ->
+                        navController.navigate(route)
+                    }
+                    Spacer(modifier = Modifier.padding(8.dp))
+                    EncouragementRow(dataState = dataState!!, message = viewModel.getEncouragementMessage())
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .padding(top = 30.dp, bottom = 30.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No Trackable data for this habit yet.",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                StreakBadge(streak = streak)
+                Spacer(modifier = Modifier.padding(8.dp))
+                if (deadline != null && progress != null) {
+                    ProgressRing(progress = progress, totalDays = userData.size)
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No data for this habit yet.",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
@@ -425,84 +210,331 @@ fun ProgressScreen(
 }
 
 @Composable
-fun LineChartView(dataSets: List<List<Entry>>) {
-    val lineDataSets = mutableListOf<LineDataSet>()
-    dataSets.mapIndexed { index, data ->
-        val label = when (index) {
-            0 -> "Tracked"  // First dataset label
-            1 -> "Goal"     // Second dataset label
-            else -> "Comparison" // Any additional datasets
-        }
-
-        val entriesWithRedDot = mutableListOf<Entry>()
-        val newData = mutableListOf<Entry>()
-
-        for (i in 1 until data.size - 1) {
-            val currentEntry = data[i]
-            val previousEntry = data[i - 1]
-            val nextEntry = data[i + 1]
-
-            if ((currentEntry.x - previousEntry.x) > 1) {
-                // Insert a red dot between previous and next entry
-                val averageY = (previousEntry.y + nextEntry.y) / 2
-                entriesWithRedDot.add(Entry(currentEntry.x-1, averageY))
-                newData.add(Entry(currentEntry.x-1, averageY))
-            } else {
-                // Add regular point
-                newData.add(currentEntry)
-            }
-        }
-        lineDataSets.add(
-            LineDataSet(newData, label).apply {
-                // Customize each dataset (e.g., colors, values, etc.)
-                when (index) {
-                    0 -> {
-                        color = AndroidColor.parseColor("#006400")
-                    }
-                    1 -> {
-                        color = AndroidColor.argb(128, 0, 255, 0)
-                        lineWidth = 5f
-                    }
-                    else -> {
-                        color = AndroidColor.BLUE
-                    }
-                }
-                valueTextColor = AndroidColor.BLACK
-                setDrawValues(false)
-                setDrawCircles(false) // Remove dots on the line
-                setDrawFilled(false)
-            }
-        )
-        lineDataSets.add(
-            LineDataSet(entriesWithRedDot, "Missed").apply {
-                setDrawCircles(true) // Show points as circles
-                setCircleColor(AndroidColor.RED) // Red color for the circles
-                setCircleRadius(3f) // Set circle radius
-                color = 0x00000000
-                setDrawValues(false) // Don't draw values on the red dots
-            }
-        )
-
-    }
-
-    val lineData = LineData(lineDataSets as MutableList<ILineDataSet>)
-
-    AndroidView(
-        factory = {
-            LineChart(it).apply {
-                this.data = lineData
-                this.invalidate() // Refresh the chart with new data
-                val legend = this.legend
-                legend.isEnabled = false
-                this.description.isEnabled = false // Disable the description
-                this.axisLeft.isEnabled = true // Disable left Y axis
-                this.axisRight.isEnabled = false // Enable right Y axis
-                this.xAxis.isEnabled = true // Enable the bottom X axis
-                this.xAxis.position = XAxis.XAxisPosition.BOTTOM // Ensure it's at the bottom
-            }
-        },
+fun ProgressHeader(
+    habitName: String,
+    darkMode: Boolean,
+    onBackClick: () -> Unit
+) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)  // Adjust the height for the graph
+            .padding(horizontal = 16.dp, vertical = 16.dp)
+    ) {
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(40.dp)
+                .padding(5.dp)
+                .align(Alignment.TopStart)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = if (darkMode) Color.White else Color.Black
+            )
+        }
+
+        Text(
+            text = habitName,
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.align(Alignment.Center)
+        )
+    }
+}
+
+@Composable
+fun DataEntryPromptCard(
+    onAddClick: () -> Unit
+) {
+    Surface(
+        color = Color(0xFFFFCDD2).copy(alpha = 0.3f),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 28.dp, vertical = 14.dp)
+                .fillMaxWidth()
+                .wrapContentHeight(Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "You haven't entered data for today yet!",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                ),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Button(onClick = onAddClick, shape = RoundedCornerShape(6.dp)) {
+                Text("Add Data")
+            }
+        }
+    }
+}
+
+@Composable
+fun TodayEntryCard(todayValue: Float, units: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() },
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(0.92f),
+                color = hf_teal.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 28.dp, vertical = 14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Today's entry: $todayValue $units",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Click to update",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        ),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StreakBadge(streak: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(2.dp),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.background(Color.Transparent)) {
+            Text(
+                text = "🔥",
+                style = TextStyle(
+                    fontSize = 60.sp,
+                    color = Color.Gray.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Bold,
+                ),
+                modifier = Modifier.align(Alignment.Center),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "$streak",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center),
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(modifier = Modifier.padding(5.dp))
+        Text(
+            text = "You have reached $streak consecutive days of tracking your goal! ",
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp)
+        )
+    }
+}
+
+@Composable
+fun LineChartView(chartData: LineChartViewModel.ChartData) {
+    class DateAxisFormatter : ValueFormatter() {
+        private val dateFormat = SimpleDateFormat("MM/dd", Locale.US)
+        override fun getFormattedValue(value: Float): String {
+            return dateFormat.format(Date(value.toLong()))
+        }
+    }
+
+    if (chartData.mainData.isEmpty()) return
+
+    val mainDataSet = LineDataSet(chartData.mainData, "Your Data").apply {
+        color = hf_teal.toArgb()
+        valueTextColor = AndroidColor.BLACK
+        setDrawValues(false)
+        setDrawCircles(true)
+        circleRadius = 4f
+        setDrawCircleHole(false)
+        setCircleColor(hf_teal.toArgb())
+        setDrawFilled(false)
+        lineWidth = 2f
+    }
+
+    val redDotDataSet = LineDataSet(chartData.redDotData, "Missing Days").apply {
+        setDrawCircles(true)
+        setDrawValues(false)
+        color = AndroidColor.TRANSPARENT
+        setCircleColor(ColorUtils.setAlphaComponent(AndroidColor.RED, 100))
+        circleRadius = 3f
+        setDrawCircleHole(true)
+        circleHoleColor = AndroidColor.WHITE
+        circleHoleRadius = 2f
+    }
+
+    val lineData = LineData(listOf(mainDataSet, redDotDataSet))
+
+    key(chartData) {
+        AndroidView(
+            factory = { context ->
+                LineChart(context).apply {
+                    this.data = lineData
+                    animateXY(1500, 1500, Easing.EaseInOutQuad)
+                    description.isEnabled = false
+                    legend.isEnabled = false
+                    xAxis.axisLineWidth = 2f
+                    axisLeft.axisLineWidth = 2f
+
+                    setDrawGridBackground(false)
+
+                    renderer = AlternatingBackgroundRenderer(this, animator, viewPortHandler)
+
+                    axisLeft.apply {
+                        isEnabled = true
+                        setDrawGridLines(true)
+                        axisMaximum = mainDataSet.yMax + 1f
+                        axisLineColor = hf_teal.toArgb()
+                        textColor = AndroidColor.parseColor("#B0B0B0")
+
+                    }
+                        .gridColor = hf_teal.copy(alpha = 0.2f).toArgb()
+                    axisRight.isEnabled = false
+
+                    xAxis.apply {
+                        isEnabled = true
+                        setDrawGridLines(false)
+                        position = XAxis.XAxisPosition.BOTTOM
+                        valueFormatter = DateAxisFormatter()
+                        granularity = 1f
+                        axisLineColor = hf_teal.toArgb()
+                        textColor = AndroidColor.parseColor("#B0B0B0")
+                    }
+
+                    invalidate()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
+    }
+}
+
+@Composable
+fun ProgressRing(progress: Float, totalDays: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(70.dp)
+                .background(Color.White, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val canvasSize = size.minDimension
+                val radius = canvasSize / 2f
+                val sweepAngle = 360f * (progress / 100f)
+
+                drawCircle(
+                    color = Color.Gray.copy(alpha = 0.3f),
+                    radius = radius
+                )
+
+                drawArc(
+                    color = hf_teal.copy(alpha = 0.7f),
+                    startAngle = -90f,
+                    sweepAngle = sweepAngle,
+                    useCenter = true,
+                    size = Size(canvasSize, canvasSize)
+                )
+            }
+            Text(
+                text = "${progress.toInt()}%",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.padding(5.dp))
+        Text(
+            text = "You have successfully tracked this habit for a total of $totalDays days!",
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp)
+        )
+    }
+}
+
+@Composable
+fun SpanSelectorButtons(
+    buttons: List<Pair<String, String>>,
+    onNavigate: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp)
+            .padding(bottom = 16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        buttons.forEach { (label, route) ->
+            Button(
+                onClick = { onNavigate(route) },
+                modifier = Modifier.width(85.dp).height(36.dp),
+                shape = RoundedCornerShape(5.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(label)
+            }
+        }
+    }
+}
+
+@Composable
+fun EncouragementRow(dataState: UserData, message: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TrendDisplay(dataState = dataState)
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp)
+        )
+    }
+}
+
+@Composable
+fun TrendDisplay(dataState: UserData, modifier: Modifier = Modifier) {
+    val trendLine = dataState.trendDrawable
+    Image(
+        painter = painterResource(id = trendLine),
+        contentDescription = "Trend Arrow",
+        modifier = modifier
+            .size(70.dp)
+            .alpha(0.5f)
     )
 }

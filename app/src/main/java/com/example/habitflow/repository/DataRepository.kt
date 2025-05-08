@@ -47,16 +47,13 @@ class DataRepository {
         val snapshot = userDataRef.get().await()
         val data = (snapshot.get("data") as? List<Map<String, Any>>)?.toMutableList() ?: mutableListOf()
 
-        // Get previous streak, default to 0 if absent
         val lastStreak = data.lastOrNull()?.get("streak") as? Long ?: 0L
         val newStreak = if (didCompleteHabit) lastStreak + 1 else 0
         val enrichedEntry = newEntry.toMutableMap()
         enrichedEntry["streak"] = newStreak
 
-        // Append the new entry (instead of using arrayUnion)
         data.add(enrichedEntry)
 
-        // Write back the full array
         userDataRef.update(
             "data", data,
             "lastUpdated", Timestamp.now()
@@ -66,22 +63,6 @@ class DataRepository {
             Log.e("DataRepository", "Error writing entry with streak: ${exception.message}")
         }
     }
-
-//    fun updateUserData(userDataId: String, newData: Map<String, Any>, currentTimestamp: Timestamp) {
-//        val db = getDatabase()
-//        db.collection("userData")
-//            .document(userDataId)
-//            .update(
-//                "data", FieldValue.arrayUnion(newData),
-//                "lastUpdated", currentTimestamp
-//            )
-//            .addOnSuccessListener {
-//                Log.d("DataRepository", "Data successfully updated")
-//            }
-//            .addOnFailureListener { exception ->
-//                Log.e("DataRepository", "Error updating data: ${exception.message}")
-//            }
-//    }
 
     fun loadUserDataFromFirestore(
         userDataId: String,
@@ -120,16 +101,13 @@ class DataRepository {
                     if (!entries.isNullOrEmpty()) {
                         val lastIndex = entries.lastIndex
 
-                        // Construct new map for the updated entry
                         val updatedEntryMap = mapOf(
                             "timestamp" to Timestamp.now(),
                             "value" to updatedEntry.y
                         )
 
-                        // Replace the last entry
                         entries[lastIndex] = updatedEntryMap
 
-                        // Update the entire data array in Firestore
                         userDataRef.update(
                             "data", entries,
                             "lastUpdated", Timestamp.now()
@@ -172,12 +150,10 @@ class DataRepository {
 
     private fun parseUserData(data: Map<String, Any>?, userDataId: String): UserData {
         val rawEntries = (data?.get("data") as? List<*>)?.mapNotNull { item ->
-            // For each item in the list, check if it is a map with a timestamp and value
             (item as? Map<*, *>)?.let { map ->
                 val timestamp = map["timestamp"] as? Timestamp
                 val value = (map["value"] as? Number)?.toFloat()
 
-                // If both timestamp and value are present, create an Entry
                 if (timestamp != null && value != null) {
                     Entry(timestamp.toDate().time.toFloat(), value)
                 } else {
@@ -193,7 +169,6 @@ class DataRepository {
         return UserData(
             userDataId = userDataId,
             userData = rawEntries, //calculateTimeDifferences(rawEntries),
-            streak = streakFromEntry.toInt(),
             lastUpdated = data?.get("lastUpdated") as? Timestamp ?: Timestamp.now(),
             createDate = data?.get("createDate") as? Timestamp ?: Timestamp.now(),
             deadline = data?.get("deadline") as? String ?: "",
@@ -203,14 +178,11 @@ class DataRepository {
     }
 
 
-    // Calculate time difference in minutes from the first timestamp
     private fun calculateTimeDifferences(entries: List<Entry>): List<Entry> {
         if (entries.isEmpty()) return emptyList()
 
-        // Get the first timestamp
         val firstTimestamp = entries.first().x
 
-        // Map each entry to a new Entry where x is the time difference in minutes
         return entries.map { entry ->
             val timeDifference = (entry.x - firstTimestamp) / 60
             Entry(timeDifference, entry.y)

@@ -126,15 +126,12 @@ class HomeViewModel(
 	fun deleteHabits(habitIds: Set<String>, onComplete: () -> Unit) {
 		val user = auth.currentUser ?: return
 
-		// Extract the habits to delete from the map, based on habitIds
 		val habitsToDelete = _habits.value.filterKeys { habitIds.contains(it.id) }
 
-		// Extract valid userDataIds
 		val userDataIds = habitsToDelete.mapNotNull { (habit, _) ->
 			habit.userDataId.takeIf { it.isNotBlank() }
 		}
 
-		// If there are userDataIds, delete them first
 		if (userDataIds.isNotEmpty()) {
 			var completedCount = 0
 			val totalToDelete = userDataIds.size

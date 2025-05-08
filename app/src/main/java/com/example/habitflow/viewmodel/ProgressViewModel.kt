@@ -8,9 +8,13 @@ import com.example.habitflow.model.UserData
 import com.example.habitflow.repository.DataRepository
 import com.example.habitflow.repository.HabitRepository
 import com.github.mikephil.charting.data.Entry
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ProgressViewModel(
@@ -35,92 +39,91 @@ class ProgressViewModel(
 		viewModelScope.launch {
 			dataRepository.loadUserDataFromFirestore(userDataId) { result ->
 				result.onSuccess { fetchedData ->
-					_userData.value = fetchedData // Update the state with the fetched data
+					_userData.value = fetchedData
 				}
 				result.onFailure { exception ->
-					// Handle failure if needed (e.g., show error message)
-					Log.e("HomeViewModel", "Error loading user data: ${exception.message}")
+					Log.e("ProgressViewModel", "Error loading user data: ${exception.message}")
 				}
 			}
 		}
 	}
 
+	fun getHabitName(): String = _habit.value?.name ?: ""
+	fun getStreak(): Int = _userData.value?.streak ?: 0
+	fun getDeadline(): Timestamp? = _userData.value?.deadlineAsTimestamp
 
-	fun countDaysWithLargerY(list1: List<Entry>, list2: List<Entry>): Int {
-		// Find the minimum size to avoid IndexOutOfBoundsException
-		val minSize = minOf(list1.size, list2.size)
-		var count = 0
 
-		for (i in 0 until minSize) { // Loop through both lists
-			if (list1[i].y > list2[i].y) { // Compare the y values
-				count++
-			}
-		}
-
-		return count
+	private val _span = MutableStateFlow("Overall")
+	val span: StateFlow<String> = _span.asStateFlow()
+	fun setSpan(newSpan: String) {
+		_span.value = newSpan
 	}
 
-	fun countDaysWithSmallerY(list1: List<Entry>, list2: List<Entry>): Int {
-		// Find the minimum size to avoid IndexOutOfBoundsException
-		val minSize = minOf(list1.size, list2.size)
-		var count = 0
-
-		for (i in 0 until minSize) { // Loop through both lists
-			if (list1[i].y < list2[i].y) { // Compare the y values for smaller values
-				count++
+	val spanData: StateFlow<List<Entry>> = _span
+		.combine(_userData) { span, data ->
+			val fullData = data?.userData ?: return@combine emptyList()
+			val now = System.currentTimeMillis()
+			val cutoff = when (span) {
+				"Weekly" -> now - 7 * 24 * 60 * 60 * 1000L
+				"Monthly" -> now - 30 * 24 * 60 * 60 * 1000L
+				else -> Long.MIN_VALUE
 			}
-		}
+			fullData.filter { it.x >= cutoff }
+		}.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-		return count
+	fun getSpanButtons(habitId: String, userDataId: String): List<Pair<String, String>> {
+		return listOf("Weekly", "Monthly", "Overall").map { span ->
+			val route = "progress/$habitId/$userDataId/$span"
+			span to route
+		}
 	}
 
-	fun countMatchingFromEndBad(list1: List<Entry>, list2: List<Entry>): Int {
-		val minSize = minOf(list1.size, list2.size) // Find the smaller list size
-		var count = 0
-
-		for (i in 1..minSize) { // Loop from end to start
-			if (list1[list1.size - i].y <= list2[list1.size - i].y) {
-				count++
-			} else {
-				break // Stop counting when a mismatch occurs
+	fun getUserProgress() : Float? {
+		val data = _userData.value
+		return if (data?.progressPercentage != null) {
+			when (data.progressPercentage > 100f) {
+				true -> 100f
+				false -> data.progressPercentage
 			}
-		}
-
-		return count
+		} else 0f
 	}
 
-	fun countMatchingFromEndGood(list1: List<Entry>, list2: List<Entry>): Int {
-		val minSize = minOf(list1.size, list2.size) // Find the smaller list size
-		var count = 0
-
-		for (i in 1..minSize) { // Loop from end to start
-			if (list1[list1.size - i].y >= list2[list1.size - i].y) {
-				count++
-			} else {
-				break // Stop counting when a mismatch occurs
-			}
+	fun getDecreasing() : Boolean? {
+		val data = _userData.value
+		if (data != null) {
+			return data.calculateDecreasing(data.userData)
 		}
-
-		return count
+		return null
 	}
 
-	fun compareLists(list1: List<Entry>, list2: List<Entry>): List<Entry> {
-		val resultList = mutableListOf<Entry>()
-
-		// Iterate through the indices of both lists
-		for (i in list1.indices) {
-			// Ensure both lists have the same index length and valid entry
-			if (i < list2.size) {
-				val entry1 = list1[i]
-				val entry2 = list2[i]
-
-				// Check if the y components are equal for the same x index
-				if (entry1.y == entry2.y) {
-					resultList.add(entry1) // Add the entry from list1 (or list2, they have the same y value)
-				}
-			}
+	fun getIncreasing() : Boolean? {
+		val data = _userData.value
+		if (data != null) {
+			return data.calculateIncreasing(data.userData)
 		}
+		return null
+	}
 
-		return resultList
+	fun getTodayValue(): Float? {
+		return _userData.value?.userData?.lastOrNull()?.y
+	}
+
+	fun shouldPromptEntry(): Boolean {
+		return _userData.value?.promptEntry == false
+	}
+
+	fun getEncouragementMessage(): String {
+		val userData = _userData.value ?: return ""
+		val type = userData.type
+		val dec = getDecreasing()
+		val inc = getIncreasing()
+
+		return when {
+			dec == true && type == "good" -> "Let's work on improving this habit!"
+			inc == true && type == "bad" -> "Let's work on improving this habit!"
+			inc == true && type == "good" -> "Keep up the great work!"
+			dec == false && type == "bad" -> "Keep up the great work!"
+			else -> "You're off to a consistent start. Keep going!"
+		}
 	}
 }

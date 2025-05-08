@@ -38,4 +38,15 @@ class HabitCardViewModel(
             false -> Icons.Default.Add
         }
     }
+
+    fun getUserProgress() : Float? {
+        if (userData.progressPercentage != null) {
+            return when (userData.progressPercentage > 100f) {
+                true -> 100f
+                false -> userData.progressPercentage
+            }
+        } else {
+            return null
+        }
+    }
 }
