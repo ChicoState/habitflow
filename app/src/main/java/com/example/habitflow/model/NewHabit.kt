@@ -16,5 +16,4 @@ data class NewHabit(
 	val customReminderUnit: String? = null,
 	var notificationTriggered: Boolean? = false,
 	var userDataId: String = ""
-
 )

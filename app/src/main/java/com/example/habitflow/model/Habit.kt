@@ -14,3 +14,4 @@ data class Habit(
     var notificationTriggered: Boolean? = false,
     var userDataId: String = ""
 )
+
