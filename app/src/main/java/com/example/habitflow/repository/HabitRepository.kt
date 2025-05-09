@@ -12,8 +12,15 @@ import java.util.concurrent.TimeUnit
 
 object HabitRepository {
 
-	private fun getDatabase(): FirebaseFirestore = FirebaseFirestore.getInstance()
+	private var firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
+	// Replace the current getDatabase function with this
+	private fun getDatabase(): FirebaseFirestore = firestore
+
+	// Add this function to allow tests to set a mock Firestore
+	fun setFirestore(mock: FirebaseFirestore) {
+		firestore = mock
+	}
 	private fun updateUserHabitList(
 		user: FirebaseUser,
 		newHabits: List<String>,

@@ -19,10 +19,10 @@ data class UserData (
     var lastUpdated: Timestamp = Timestamp.now(),
     val createDate: Timestamp,
     val deadline: String? = null,
-    val deadlineAsTimestamp: Timestamp? = parseDeadlineToTimestamp(deadline),
     val backgroundColor: Color = getColorBasedOnType(type),
-    val progressPercentage: Float? = calculateDeadlineRatio(createDate, lastUpdated, deadlineAsTimestamp),
     val promptEntry: Boolean = promptForDataEntry(lastUpdated, userData),
+    val deadlineAsTimestamp: Timestamp? = parseDeadlineToTimestamp(deadline),
+    val progressPercentage: Float? = calculateDeadlineRatio(createDate, lastUpdated, deadlineAsTimestamp),
     val trackingMethod: String = ""
 ) {
     val trendDrawable: Int
@@ -108,6 +108,7 @@ data class UserData (
             return lastUpdatedDate.time == today.time
         }
     }
+
     fun calculateDecreasing(userData: List<Entry>): Boolean? {
         if (userData.size <= 1) {
             return null
