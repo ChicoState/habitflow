@@ -1,8 +1,12 @@
+
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services") // Firebase Plugin
+    id("com.google.gms.google-services")
+    id("jacoco")
 }
 
 android {
@@ -26,6 +30,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            enableAndroidTestCoverage = true
         }
     }
     compileOptions {
@@ -78,6 +85,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.10.1")
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.appcompat)
+    implementation(libs.core.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -94,6 +102,33 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("connectedDebugAndroidTest")
+    val fileFilter = listOf(
+        "**/R.class", "**/R$*.class",
+        "**/BuildConfig.*", "**/Manifest*.*",
+        "**/*Test*.*", "android/**/*.*"
+    )
+    val mainSrc = "${project.projectDir}/src/main/java"
+    val kotlinSrc = "${project.projectDir}/src/main/kotlin"
+    val javaClassTree = fileTree("${layout. buildDirectory}/intermediates/javac/debug") {
+        exclude(fileFilter)
+    }
+    val kotlinClassTree = fileTree("${layout. buildDirectory}/tmp/kotlin-classes/debug") {
+        exclude(fileFilter)
+    }
+    classDirectories.setFrom(files(javaClassTree, kotlinClassTree))
+    sourceDirectories.setFrom(files(mainSrc, kotlinSrc))
+    executionData.setFrom(fileTree("${layout. buildDirectory}/outputs/code_coverage/debugAndroidTest/connected") {
+        include("**/coverage.ec")
+    })
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(file("${layout. buildDirectory}/reports/jacoco/html"))
+        xml.required.set(true)
+    }
 }
 
 apply(plugin = "com.google.gms.google-services")

@@ -180,6 +180,74 @@ class NewHabitTest {
     }
 }
 
+class UserTest {
+
+    @Test
+    fun defaultUser_hasCorrectDefaults() {
+        val user = User()
+
+        assertEquals("", user.name)
+        assertEquals(0, user.age)
+        assertEquals("", user.gender)
+        assertEquals("", user.email)
+        assertTrue(user.habits.isEmpty())
+        assertTrue(user.pastHabits.isEmpty())
+    }
+
+    @Test
+    fun user_withCustomValues_hasCorrectProperties() {
+        val currentHabits = listOf("Exercise", "Meditate")
+        val oldHabits = listOf("Smoke", "Drink")
+
+        val user = User(
+            name = "Alex",
+            age = 25,
+            gender = "Non-binary",
+            email = "alex@example.com",
+            habits = currentHabits,
+            pastHabits = oldHabits
+        )
+
+        assertEquals("Alex", user.name)
+        assertEquals(25, user.age)
+        assertEquals("Non-binary", user.gender)
+        assertEquals("alex@example.com", user.email)
+        assertEquals(currentHabits, user.habits)
+        assertEquals(oldHabits, user.pastHabits)
+    }
+
+    @Test
+    fun users_withSameValues_areEqual() {
+        val user1 = User(name = "Jordan", age = 30)
+        val user2 = User(name = "Jordan", age = 30)
+
+        assertEquals(user1, user2)
+        assertEquals(user1.hashCode(), user2.hashCode())
+    }
+
+    @Test
+    fun user_lists_canContainValues() {
+        val user = User(
+            name = "Maya",
+            habits = listOf("Read", "Yoga"),
+            pastHabits = listOf("Junk Food")
+        )
+
+        assertTrue(user.habits.contains("Yoga"))
+        assertTrue(user.pastHabits.contains("Junk Food"))
+    }
+
+    @Test
+    fun user_lists_areImmutable() {
+        val user = User(habits = listOf("Run"))
+        try {
+            (user.habits as MutableList).add("Sleep")
+            fail("Expected UnsupportedOperationException")
+        } catch (e: UnsupportedOperationException) {
+        }
+    }
+}
+
 class UserDataTest {
 
     private fun timestampFrom(dateStr: String): Timestamp {
@@ -404,73 +472,5 @@ class UserDataTest {
         val data = listOf(Entry(0f, 5f), Entry(1f, 2f))
         val user = UserData(type = "bad", createDate = Timestamp.now(), userData = data)
         assertEquals(R.drawable.good_decrease, user.trendDrawable)
-    }
-}
-
-class UserTest {
-
-    @Test
-    fun defaultUser_hasCorrectDefaults() {
-        val user = User()
-
-        assertEquals("", user.name)
-        assertEquals(0, user.age)
-        assertEquals("", user.gender)
-        assertEquals("", user.email)
-        assertTrue(user.habits.isEmpty())
-        assertTrue(user.pastHabits.isEmpty())
-    }
-
-    @Test
-    fun user_withCustomValues_hasCorrectProperties() {
-        val currentHabits = listOf("Exercise", "Meditate")
-        val oldHabits = listOf("Smoke", "Drink")
-
-        val user = User(
-            name = "Alex",
-            age = 25,
-            gender = "Non-binary",
-            email = "alex@example.com",
-            habits = currentHabits,
-            pastHabits = oldHabits
-        )
-
-        assertEquals("Alex", user.name)
-        assertEquals(25, user.age)
-        assertEquals("Non-binary", user.gender)
-        assertEquals("alex@example.com", user.email)
-        assertEquals(currentHabits, user.habits)
-        assertEquals(oldHabits, user.pastHabits)
-    }
-
-    @Test
-    fun users_withSameValues_areEqual() {
-        val user1 = User(name = "Jordan", age = 30)
-        val user2 = User(name = "Jordan", age = 30)
-
-        assertEquals(user1, user2)
-        assertEquals(user1.hashCode(), user2.hashCode())
-    }
-
-    @Test
-    fun user_lists_canContainValues() {
-        val user = User(
-            name = "Maya",
-            habits = listOf("Read", "Yoga"),
-            pastHabits = listOf("Junk Food")
-        )
-
-        assertTrue(user.habits.contains("Yoga"))
-        assertTrue(user.pastHabits.contains("Junk Food"))
-    }
-
-    @Test
-    fun user_lists_areImmutable() {
-        val user = User(habits = listOf("Run"))
-        try {
-            (user.habits as MutableList).add("Sleep")
-            fail("Expected UnsupportedOperationException")
-        } catch (e: UnsupportedOperationException) {
-        }
     }
 }
